@@ -1,0 +1,4 @@
+[ 3871375ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8765/boost.html:0
+[ 3871390ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8765/favicon.ico:0
+[ 3872052ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8765/boost.html:0
+[ 3872058ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8765/favicon.ico:0

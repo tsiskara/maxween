@@ -354,6 +354,23 @@ main{flex:1; position:relative; margin:0 10px 6px; border-radius:22px; overflow:
 }
 @media (max-width:420px){ .lvlbar{display:none} }
 
+	/* ====== v4.5 — fly-phase overlay dimming (keep canvas clear) ====== */
+	main.flying #liveFeed{opacity:0.12;pointer-events:none;transition:opacity .5s ease;width:100px}
+	main.flying #chatBar{display:none}
+	main.flying #banner{top:15%!important}
+	main.flying #streakInd{opacity:0.35;transition:opacity .5s}
+	main.flying #pfBadge{opacity:0.35;transition:opacity .5s}
+	main.flying #phaseLbl{top:auto;bottom:6px;font-size:9px;letter-spacing:2px;opacity:0.5}
+	main.hot{border-color:rgba(255,199,64,.3)!important;box-shadow:inset 0 0 80px rgba(0,0,0,.65), 0 20px 50px rgba(0,0,0,.5), 0 0 40px rgba(255,199,64,.12)!important;transition:border-color .8s,box-shadow .8s}
+	main.cold{border-color:rgba(54,198,255,.15)!important;transition:border-color .8s}
+	#liveFeed{width:110px;max-height:calc(100% - 150px);overflow-y:auto;scrollbar-width:none;transition:width .4s,opacity .4s}
+	#liveFeed::-webkit-scrollbar{display:none}
+	/* cashout button gets urgent orange at high multipliers */
+	.betbtn.cashout.urgent{background:linear-gradient(180deg,#ff8b3d,#e06a18)!important;box-shadow:0 4px 18px rgba(255,107,61,.6), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 0 rgba(255,107,61,.5)!important;animation:cp2 .7s ease infinite!important}
+	@keyframes cp2{0%,100%{box-shadow:0 4px 18px rgba(255,107,61,.5), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 0 rgba(255,107,61,.5)}50%{box-shadow:0 4px 24px rgba(255,107,61,.8), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 6px rgba(255,107,61,0)}}
+	.betbtn.cashout.red{background:linear-gradient(180deg,#ff3b5c,#c02038)!important;box-shadow:0 4px 18px rgba(255,59,92,.7), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 0 rgba(255,59,92,.5)!important;animation:cp3 .5s ease infinite!important}
+	@keyframes cp3{0%,100%{box-shadow:0 4px 18px rgba(255,59,92,.6), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 0 rgba(255,59,92,.5)}50%{box-shadow:0 4px 24px rgba(255,59,92,.9), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 8px rgba(255,59,92,0)}}
+
 /* ====== accessibility + Apple polish ====== */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
@@ -388,7 +405,7 @@ canvas:focus-visible{outline-offset:-4px}
 
   <div id="history"></div>
 
-  <main>
+	<main id="gameMain">
     <canvas id="cv" aria-label="BOOST game — multiplier curve and rocket visualization" role="img"></canvas>
     <div id="liveFeed"></div>
     <div id="chatBar"></div>
@@ -497,19 +514,36 @@ function randHex(n){
   else for(let i=0;i<n;i++)a[i]=Math.floor(Math.random()*256);
   return [...a].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-function crashFromHash(hashHex){
-  const h=parseInt(hashHex.slice(0,8),16);
-  const r=h/0xFFFFFFFF;
-  if(r>1-CFG.HOUSE_EDGE) return 1.00;
-  const m=(1-CFG.HOUSE_EDGE)/(1-r);
-  const h2=parseInt(hashHex.slice(8,12),16)/0xFFFF;
-  let result=m;
-  if(h2>0.97) result=m*(1+(h2-0.97)*8);
-  // Cap at MAX_MULT — prevents 38s boring mega-rounds and float-precision drift.
-  // Provably-fair: the cap is deterministic from the hash, so verification stays consistent.
-  result=Math.min(result, CFG.MAX_MULT);
-  return Math.max(1.00, Math.floor(result*100)/100);
-}
+/* ponytail: volatility drift — creates natural hot/cold streaks without breaking
+	   provably-fair verification. Drift is a deterministic post-process applied *after*
+	   the hash-derived crash point, so the hash still produces the base. The drift just
+	   mushes consecutive low or high crashes together into more organic clusters. */
+	let volDrift=0; // -3..+3. Positive = hot (higher crashes), negative = cold (lower)
+	const VOL_DRIFT_STRIDE=0.5;
+	function crashFromHash(hashHex){
+	  const h=parseInt(hashHex.slice(0,8),16);
+	  const r=h/0xFFFFFFFF;
+	  if(r>1-CFG.HOUSE_EDGE) return 1.00;
+	  const m=(1-CFG.HOUSE_EDGE)/(1-r);
+	  const h2=parseInt(hashHex.slice(8,12),16)/0xFFFF;
+	  let result=m;
+	  if(h2>0.97) result=m*(1+(h2-0.97)*8);
+	  // Apply volatility drift: scales the result by 0..15% based on drift
+	  const driftFactor=1+(volDrift*0.05);
+	  result=result*driftFactor;
+	  // Back toward neutral: if drift was applied, decay it slightly
+	  if(volDrift>0.01) volDrift-=0.08;
+	  else if(volDrift<-0.01) volDrift+=0.08;
+	  result=Math.min(result, CFG.MAX_MULT);
+	  return Math.max(1.00, Math.floor(result*100)/100);
+	}
+	function updateVolatility(crashAt){
+	  if(crashAt<1.5){ volDrift=Math.min(3, volDrift+VOL_DRIFT_STRIDE); } // hot up
+	  else if(crashAt>5){ volDrift=Math.max(-3, volDrift-VOL_DRIFT_STRIDE); } // cold down
+	  else if(crashAt>3) volDrift=Math.max(-2, volDrift-VOL_DRIFT_STRIDE*0.5);
+	  const main=document.getElementById('gameMain');
+	  if(main){ main.classList.toggle('hot', volDrift>0.6); main.classList.toggle('cold', volDrift<-0.6); }
+	}
 
 /* ---------- Persistence v3 ---------- */
 const KEY='boost_save_v3';
@@ -540,7 +574,7 @@ function migrate(s){
   return s;
 }
 function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)||'{}'); return migrate(s); }catch(e){ return JSON.parse(JSON.stringify(DEFAULTS)); } }
-function save(){ localStorage.setItem(KEY,JSON.stringify(SAVE)); }
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(SAVE)); }catch(e){ /* localStorage full or disabled — game still works in-memory */ } }
 
 /* ---------- Definitions ---------- */
 const ACHIEVEMENTS=[
@@ -760,9 +794,11 @@ const A=(()=>{
     whoosh(){ noise(.3,.15,700); },
     levelUp(){ [523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>tone(f,.12,'triangle',.16),i*70)); setTimeout(()=>{tone(1046,.4,'sine',.1);tone(1568,.4,'sine',.08);},420); },
     lbxOpen(rarity){ const base=rarity==='legendary'?880:rarity==='epic'?660:rarity==='rare'?523:440; [base,base*1.25,base*1.5].forEach((f,i)=>setTimeout(()=>tone(f,.14,'triangle',.15),i*90)); if(rarity==='legendary')setTimeout(()=>tone(base*2,.5,'sine',.12),300); },
-    comboTick(n){ tone(600+Math.min(n,12)*60,.06,'square',.1); },
-    count(){ tone(660,.04,'square',.06); },
-  };
+	    comboTick(n){ tone(600+Math.min(n,12)*60,.06,'square',.1); },
+	    count(){ tone(660,.04,'square',.06); },
+	    /* ponytail: iOS Safari suspends AudioContext until a user gesture calls resume() */
+	    resume(){ const x=ac; if(x && x.state==='suspended') try{ x.resume(); }catch(e){} },
+	  };
 })();
 
 /* ---------- Haptics ---------- */
@@ -778,12 +814,14 @@ const PH={BET:'bet',FLY:'fly',CRASH:'crash'};
 // Resolve the real family stack once from computed style.
 const BODY_FONT=getComputedStyle(document.body).fontFamily||'sans-serif';
 function makeBetSlot(i){ return {idx:i, amount:i===0?10:20, autoAt:2.0, placed:false, cashedOut:false, cashMult:0, winAmt:0, autoRounds:0}; }
-const G={
-  phase:PH.BET, mult:1, crashAt:2, elapsed:0, phaseT:0,
-  curve:[], embers:[], smoke:[],
-  bets:[ makeBetSlot(0), makeBetSlot(1) ],
-  particles:[], coins:[], confetti:[], rings:[], debris:[],
-  shake:0, flash:0, flashColor:'255,80,60', bustScale:0,
+	const G={
+	  phase:PH.BET, mult:1, crashAt:2, elapsed:0, phaseT:0,
+	  curve:[], embers:[], smoke:[],
+	  bets:[ makeBetSlot(0), makeBetSlot(1) ],
+	  particles:[], coins:[], confetti:[], rings:[], debris:[],
+	  shake:0, flash:0, flashColor:'255,80,60',
+	  flash2:0, flash2Color:'255,255,255', // ponytail: two-stage crash flash (white → red)
+	  bustScale:0,
   rocketX:0, rocketY:0, rocketAng:0,
   time:0, last:0, balance:SAVE.balance, started:false,
   bgStars:[], bgNebula:[], lastTickMult:1,
@@ -860,8 +898,12 @@ function resize(){ const r=cv.getBoundingClientRect(); DPR=Math.min(window.devic
 window.addEventListener('resize',resize);
 
 /* ---------- Phases ---------- */
-async function startBetting(){
-  G.phase=PH.BET; G.phaseT=0; G.mult=1; G.elapsed=0; G.curve=[]; G.embers=[]; G.smoke=[];
+	async function startBetting(){
+	  document.getElementById('gameMain').classList.remove('flying');
+	  // cleanup stray float text from previous round
+	  const fl=document.getElementById('floatLayer');
+	  if(fl){ while(fl.firstChild) fl.removeChild(fl.firstChild); }
+	  G.phase=PH.BET; G.phaseT=0; G.mult=1; G.elapsed=0; G.curve=[]; G.embers=[]; G.smoke=[];
   G.particles=[]; G.coins=[]; G.confetti=[]; G.rings=[]; G.debris=[]; G.bustScale=0;
   for(const b of G.bets){ b.placed=false; b.cashedOut=false; b.cashMult=0; b.winAmt=0; }
   setPhase('PLACE YOUR BETS','',false);
@@ -879,10 +921,11 @@ async function startBetting(){
   setTimeout(autoBetPlace, 350);
   if(G.started) botRoundStart();
 }
-async function startFlight(){
-  G.phase=PH.FLY; G.phaseT=0; G.elapsed=0; G.mult=1; G.curve=[{t:0,m:1}]; G.hitMile=[];
-  G.lastTickMult=1; // ponytail: was never reset → tick SFX + mult pulse stayed silent after any round whose peak exceeded the next round's climb
-  const placedThisRound=G.bets.filter(b=>b.placed).map(b=>({idx:b.idx,amount:b.amount,autoAt:b.autoAt}));
+	async function startFlight(){
+	  document.getElementById('gameMain').classList.add('flying');
+	  G.phase=PH.FLY; G.phaseT=0; G.elapsed=0; G.mult=1; G.curve=[{t:0,m:1}]; G.hitMile=[];
+	  G.lastTickMult=1; // ponytail: was never reset → tick SFX + mult pulse stayed silent after any round whose peak exceeded the next round's climb
+	  const placedThisRound=G.bets.filter(b=>b.placed).map(b=>({idx:b.idx,amount:b.amount,autoAt:b.autoAt}));
   if(placedThisRound.length){ SAVE.lastBets=placedThisRound; save(); }
   G.crashAt=crashFromHash(G.roundHashFull);
   setPhase('FLYING','',true);
@@ -891,10 +934,13 @@ async function startFlight(){
   G.flash=.25; G.flashColor='255,200,80';
   renderBets();
 }
-function doCrash(){
-  G.phase=PH.CRASH; G.phaseT=0; G.mult=G.crashAt;
-  A.crash(); A.stopFlight(); A.musicCrash(); haptic([50,30,80]);
-  G.shake=SAVE.settings.reducedMotion?0:18; G.flash=SAVE.settings.reducedMotion?0:.5; G.flashColor='255,60,70'; G.bustScale=0;
+	function doCrash(){
+	  document.getElementById('gameMain').classList.remove('flying');
+	  G.phase=PH.CRASH; G.phaseT=0; G.mult=G.crashAt;
+	  A.crash(); A.stopFlight(); A.musicCrash(); haptic([50,30,80]);
+	  G.shake=SAVE.settings.reducedMotion?0:18; G.flash=SAVE.settings.reducedMotion?0:.5; G.flashColor='255,60,70';
+	  G.flash2=SAVE.settings.reducedMotion?0:0.35; G.flash2Color='255,255,255'; // brief white punch before red
+	  G.bustScale=0;
   if(!SAVE.settings.reducedMotion){
     burst(G.rocketX,G.rocketY,36,'#ff8b3d',300); burst(G.rocketX,G.rocketY,24,'#ff3b5c',240); burst(G.rocketX,G.rocketY,16,'#ffc740',180);
     G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:0.8,age:0,col:'255,60,70',maxR:Math.max(W,H)});
@@ -919,8 +965,9 @@ function doCrash(){
   SAVE.roundsPlayed++; SAVE.nonce++;
   SAVE.provReveals.unshift({hash:G.roundHash,seed:SAVE.serverSeed,clientSeed:SAVE.clientSeed,nonce:SAVE.nonce-1,crash:G.crashAt});
   SAVE.provReveals=SAVE.provReveals.slice(0,10);
-  if(SAVE.nonce%50===0){ SAVE.serverSeed=randHex(16); }
-  save();
+	  if(SAVE.nonce%50===0){ SAVE.serverSeed=randHex(16); }
+	  save();
+	  updateVolatility(G.crashAt);
   resetCombo();
   missionEvent('playCount',1);
   checkLossPity(anyLost);
@@ -932,10 +979,17 @@ function doCrash(){
   multEl2.className='bust';
   multEl2.innerHTML=fmt(G.crashAt)+'<span style="font-size:.45em">×</span>';
   const cashed=G.bets.filter(b=>b.cashedOut);
-  document.getElementById('multSub').textContent = cashed.length
-    ? 'CASHED · BUST @ '+fmt(G.crashAt)+'×'
-    : 'BUST @ '+fmt(G.crashAt)+'×';
-}
+	  document.getElementById('multSub').textContent = cashed.length
+	    ? 'CASHED · BUST @ '+fmt(G.crashAt)+'×'
+	    : 'BUST @ '+fmt(G.crashAt)+'×';
+	  // ponytail: tap main to skip the 3s crash pause (after the explosion settles)
+	  setTimeout(()=>{
+	    const gm=document.getElementById('gameMain');
+	    if(!gm)return;
+	    const skip=()=>{ if(G.phase===PH.CRASH) G.phaseT=CFG.CRASH_PAUSE-50; gm.removeEventListener('pointerdown',skip); };
+	    gm.addEventListener('pointerdown',skip,{once:true});
+	  },900);
+	}
 function doCashOut(b){
   if(G.phase!==PH.FLY||!b.placed||b.cashedOut)return;
   b.cashedOut=true; b.cashMult=G.mult;
@@ -958,12 +1012,14 @@ function doCashOut(b){
   // ponytail: win beat was weak (tiny text, no punch). Added: screen flash,
   // denser coin shower, double ring (fast punch + slow bloom), rocket burst.
   if(!SAVE.settings.reducedMotion){
-    // green→gold screen flash, brighter for jackpots
-    G.flash=isJackpot?0.6:0.35; G.flashColor=isJackpot?'255,199,64':'46,230,138';
-    // coin shower: 28→48 (jackpot 72), spread wider, launched from the rocket
-    const coinN=isJackpot?72:48;
-    for(let i=0;i<coinN;i++) G.coins.push({x:G.rocketX+(Math.random()-.5)*100,y:G.rocketY,vx:(Math.random()-.5)*420,vy:-Math.random()*520-140,life:1.5,age:0,r:5+Math.random()*5,rot:Math.random()*6,vr:(Math.random()-.5)*10});
-    for(let i=0;i<40;i++) G.confetti.push({x:W*0.5+(Math.random()-.5)*W*0.4,y:H*0.3,vx:(Math.random()-.5)*200,vy:Math.random()*100+50,life:1.8,age:0,w:4+Math.random()*4,h:6+Math.random()*6,rot:Math.random()*6,vr:(Math.random()-.5)*12,hue:Math.floor(Math.random()*360)});
+	    // green→gold screen flash, brighter for jackpots
+	    G.flash=isJackpot?0.7:0.4; G.flashColor=isJackpot?'255,199,64':'46,230,138';
+	    // white burst flash before the color for extra punch
+	    if(isJackpot){ G.flash2=0.3; G.flash2Color='255,255,255'; }
+	    // coin shower: 28→48 (jackpot 72), spread wider, launched from the rocket
+	    const coinN=isJackpot?72:48;
+	    for(let i=0;i<coinN;i++) G.coins.push({x:G.rocketX+(Math.random()-.5)*120+(isJackpot?40:0),y:G.rocketY,vx:(Math.random()-.5)*480,vy:-Math.random()*580-120,life:1.5+Math.random()*0.3,age:0,r:3+Math.random()*7,rot:Math.random()*6,vr:(Math.random()-.5)*12});
+	    for(let i=0;i<40;i++) G.confetti.push({x:W*0.5+(Math.random()-.5)*W*0.6,y:H*0.3+(Math.random()-.5)*50,vx:(Math.random()-.5)*260,vy:Math.random()*120+40,life:1.8,age:0,w:3+Math.random()*6,h:5+Math.random()*8,rot:Math.random()*6,vr:(Math.random()-.5)*14,hue:Math.floor(Math.random()*360)});
     // double ring: fast punch + slow bloom
     G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:0.5,age:0,col:'255,255,255',maxR:Math.max(W,H)*0.5});
     G.rings.push({x:W*0.5,y:H*0.44,r:10,life:1,age:0,col:'46,230,138',maxR:Math.max(W,H)*0.8});
@@ -1075,12 +1131,13 @@ function loop(ts){
     setPhase((anyPlaced?'LOCKED IN':'PLACE YOUR BETS')+' · '+left.toFixed(1)+'s','',anyPlaced);
     if(G.phaseT>=CFG.BET_TIME) startFlight();
     if(G.phaseT>200 && Math.floor(G.phaseT)%1000<16) rpMaybeRealityCheck();
-  } else if(G.phase===PH.FLY){
-    G.elapsed+=dt; G.mult=1.0024*Math.exp(CFG.GROWTH*G.elapsed*2.5);
-    G.curve.push({t:G.elapsed,m:G.mult}); if(G.curve.length>600)G.curve.shift();
-    A.updateFlight(G.mult);
-    if(G.mult-G.lastTickMult>=0.1){ A.tick(); G.lastTickMult=G.mult; }
-    const MILES=[{t:1,v:2,tx:'2× — LIFTOFF'},{t:2,v:5,tx:'5× — HEATING UP'},{t:3,v:10,tx:'10× 🚀 TO THE MOON'},{t:4,v:25,tx:'25× 🌙 LEGENDARY'},{t:5,v:50,tx:'50× 👑 GODLIKE'}];
+	  } else if(G.phase===PH.FLY){
+	    G.elapsed+=dt; G.mult=1.0024*Math.exp(CFG.GROWTH*G.elapsed*2.5);
+	    G.curve.push({t:G.elapsed,m:G.mult}); if(G.curve.length>600)G.curve.shift();
+	    A.updateFlight(G.mult);
+	    if(G.mult-G.lastTickMult>=0.1){ A.tick(); G.lastTickMult=G.mult; }
+	    botMaybeCash(G.mult); // ponytail: was MISSING — bots never cashed out live
+	    const MILES=[{t:1,v:2,tx:'2× — LIFTOFF'},{t:2,v:5,tx:'5× — HEATING UP'},{t:3,v:10,tx:'10× 🚀 TO THE MOON'},{t:4,v:25,tx:'25× 🌙 LEGENDARY'},{t:5,v:50,tx:'50× 👑 GODLIKE'}];
     for(const ml of MILES){ if(!G.hitMile[ml.t] && G.mult>=ml.v){ G.hitMile[ml.t]=1; milestoneFlash(ml.t,ml.tx); } }
     const last=plot(G.elapsed,G.mult);
     if(!SAVE.settings.reducedMotion && Math.random()<0.7){ const sk=skinById(SAVE.equippedSkin); G.embers.push({x:last.x,y:last.y,vx:-20-Math.random()*30,vy:30+Math.random()*40,life:0.5+Math.random()*.3,age:0,r:1.5+Math.random()*2,col:sk.trail}); }
@@ -1103,8 +1160,9 @@ function updateFX(dt){
   for(const c of G.confetti){c.age+=ds;c.vy+=180*ds;c.x+=c.vx*ds;c.y+=c.vy*ds;c.rot+=c.vr*ds;} G.confetti=G.confetti.filter(c=>c.age<c.life&&c.y<H+30);
   for(const r of G.rings){r.age+=ds;r.r+=(r.maxR/r.life)*ds;} G.rings=G.rings.filter(r=>r.age<r.life);
   for(const d of G.debris){d.age+=ds;d.vy+=300*ds;d.x+=d.vx*ds;d.y+=d.vy*ds;d.rot+=d.vr*ds;} G.debris=G.debris.filter(d=>d.age<d.life);
-  if(G.shake>0){G.shake*=.88;if(G.shake<.3)G.shake=0;}
-  if(G.flash>0){G.flash*=.9;if(G.flash<.01)G.flash=0;}
+	  if(G.shake>0){G.shake*=.88;if(G.shake<.3)G.shake=0;}
+	  if(G.flash>0){G.flash*=.9;if(G.flash<.01)G.flash=0;}
+	  if(G.flash2>0){G.flash2*=.88;if(G.flash2<.01)G.flash2=0;}
   if(G.phase===PH.FLY && Math.floor(G.elapsed/2500)!==(G._lastSwell||0)){ G._lastSwell=Math.floor(G.elapsed/2500); A.swell(G._lastSwell); }
 }
 function burst(x,y,n,col,sp){ for(let i=0;i<n;i++){const a=Math.random()*6.28,v=(sp||200)*(.4+Math.random()*.8); G.particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.6+Math.random()*.5,age:0,r:2+Math.random()*4,col}); } }
@@ -1120,7 +1178,13 @@ function render(){
   drawRockets(); drawRings(); drawParticles(); drawDebris(); drawCoins(); drawConfetti();
   if(G.phase===PH.CRASH && G.phaseT<1500){ const a=Math.max(0,0.35-G.phaseT/4500); const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.2,W/2,H/2,Math.max(W,H)*0.7); g.addColorStop(0,'rgba(255,60,70,0)'); g.addColorStop(1,'rgba(255,60,70,'+a+')'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }
   if(G.phase===PH.FLY && G.bets.some(b=>b.cashedOut)){ const t=(G.time%1000)/1000; const a=0.1*(1-t); if(a>0.01){const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.2,W/2,H/2,Math.max(W,H)*0.7); g.addColorStop(0,'rgba(46,230,138,0)'); g.addColorStop(1,'rgba(46,230,138,'+a+')'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);} }
-  if(G.flash>0){ ctx.fillStyle='rgba('+G.flashColor+','+G.flash+')'; ctx.fillRect(0,0,W,H); }
+	  if(G.flash>0){ ctx.fillStyle='rgba('+G.flashColor+','+G.flash+')'; ctx.fillRect(0,0,W,H); }
+	  if(G.flash2>0){ ctx.fillStyle='rgba('+G.flash2Color+','+G.flash2+')'; ctx.fillRect(0,0,W,H); }
+	  // hot-streak glow during flight
+	  if(G.phase===PH.FLY && volDrift>0.6 && !SAVE.settings.reducedMotion){
+	    const ha=Math.min(0.06, Math.abs(Math.sin(G.time*0.002))*0.04);
+	    ctx.fillStyle='rgba(255,199,64,'+ha.toFixed(4)+')'; ctx.fillRect(0,0,W,H);
+	  }
   if(G.phase===PH.FLY){ const vi=Math.min(.55,Math.max(0,G.mult-1)*0.04); if(vi>0.02){ const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.25,W/2,H/2,Math.max(W,H)*0.7); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,'+vi.toFixed(3)+')'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); } }
   if(G.phase===PH.CRASH && G.phaseT<600 && !SAVE.settings.reducedMotion){ ctx.globalCompositeOperation='lighter'; const a=Math.max(0,.3-G.phaseT/2000); ctx.fillStyle='rgba(255,0,80,'+a+')'; ctx.fillRect(-3,0,W,H); ctx.fillStyle='rgba(0,200,255,'+a+')'; ctx.fillRect(3,0,W,H); ctx.globalCompositeOperation='source-over'; }
   ctx.restore();
@@ -1253,10 +1317,10 @@ function updateBalance(noAnim){ const el=document.getElementById('balance'); con
   if(balTween)clearInterval(balTween);
   balTween=setInterval(()=>{ const k=Math.min(1,(performance.now()-t0)/dur); const e=1-Math.pow(1-k,3); const v=Math.round(from+(to-from)*e); el.textContent=v.toLocaleString(); if(k>=1){clearInterval(balTween);balTween=null;} },16);
 }
-function floatText(x,y,txt,cls){ const L=document.getElementById('floatLayer'); const r=document.getElementById('cv').getBoundingClientRect(); const px=r.left+x, py=r.top+y;
-  const d=document.createElement('div'); d.className='float '+cls; d.textContent=txt; d.style.left=px+'px'; d.style.top=py+'px';
-  document.body.appendChild(d); setTimeout(()=>d.remove(),1400);
-}
+	function floatText(x,y,txt,cls){ const L=document.getElementById('floatLayer'); if(!L)return;
+	  const d=document.createElement('div'); d.className='float '+cls; d.textContent=txt; d.style.left=x+'px'; d.style.top=y+'px';
+	  L.appendChild(d); setTimeout(()=>d.remove(),1400);
+	}
 let mileElT=null;
 function milestoneFlash(tier,txt){ const el=document.getElementById('mileFlash'); el.textContent=txt; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(mileElT); mileElT=setTimeout(()=>el.classList.remove('show'),800); A.milestone(tier);
   const last=plot(G.elapsed,G.mult); burst(last.x,last.y,16,'#ffc740',220); G.rings.push({x:last.x,y:last.y,r:10,life:.7,age:0,col:'255,199,64',maxR:Math.max(W,H)*.4}); haptic([20,30,20]);
@@ -1313,18 +1377,20 @@ function onBetBtn(b){
     missionEvent('betSize',b.amount); renderBotsTable();   // fix: betSize mission + live table
   } else if(G.phase===PH.FLY){ doCashOut(b); }
 }
-function updateBetsLive(){
-  for(const b of G.bets){
-    const card=document.getElementById('bets').children[b.idx]; if(!card)continue;
-    const btn=card.querySelector('.betbtn'); if(!btn)continue;
-    if(b.cashedOut) continue;
-    if(b.placed && G.phase===PH.FLY){
-      btn.className='betbtn cashout';
-      btn.firstChild.textContent='CASH '+fmt(G.mult)+'×';
-      const sub=btn.querySelector('.sub'); if(sub) sub.textContent='win '+Math.round(b.amount*G.mult).toLocaleString()+' 🪙';
-    }
-  }
-}
+	function updateBetsLive(){
+	  for(const b of G.bets){
+	    const card=document.getElementById('bets').children[b.idx]; if(!card)continue;
+	    const btn=card.querySelector('.betbtn'); if(!btn)continue;
+	    if(b.cashedOut) continue;
+	    if(b.placed && G.phase===PH.FLY){
+	      // ponytail: button goes green→orange→red as multiplier climbs → urgency
+	      const cls=G.mult>=5?'cashout red':G.mult>=3?'cashout urgent':'cashout';
+	      btn.className='betbtn '+cls;
+	      btn.firstChild.textContent='CASH '+fmt(G.mult)+'×';
+	      const sub=btn.querySelector('.sub'); if(sub) sub.textContent='win '+Math.round(b.amount*G.mult).toLocaleString()+' 🪙';
+	    }
+	  }
+	}
 
 /* ---------- History ---------- */
 function pushHistory(m,result){
@@ -1526,10 +1592,11 @@ document.getElementById('playBtn').onclick=async ()=>{
 };
 window.addEventListener('keydown',e=>{ if(e.code==='Space'){ e.preventDefault(); if(!G.started){document.getElementById('playBtn').click();return;} const b=G.bets.find(x=>x.placed&&!x.cashedOut); if(b)onBetBtn(b); } });
 window.addEventListener('pointerdown',()=>{
-  A.setMute(SAVE.mute); A.setVol(SAVE.settings.volume);
-  A.setMusicVol(SAVE.settings.musicVol);
-  if(SAVE.settings.music!==false && !G.started) A.musicMenu(); // menu theme on first tap
-},{once:true});
+	  A.resume();
+	  A.setMute(SAVE.mute); A.setVol(SAVE.settings.volume);
+	  A.setMusicVol(SAVE.settings.musicVol);
+	  if(SAVE.settings.music!==false && !G.started) A.musicMenu(); // menu theme on first tap
+	},{once:true});
 document.getElementById('pfBadge').onclick=openProvFair;
 
 /* ---------- PWA manifest inline ---------- */
@@ -1615,8 +1682,45 @@ function autoBetPlace(){
 }
 
 /* ---------- Live bets feed (simulated other players) ---------- */
-const BOT_NAMES=['rocketrick','luna7','crashkid','bigben','moonmax','fomo_fred','diamond_dan','zenbetter','sally_skins','luckyleo','titan_t','cryptocat','betbomber','astrid_99','gimme_grn','vividvivi','risk_rita','safesam','mr_multi','hodl_hero','spacemonkey','pepe_pt','nosleep_tv','vicki_vault','scalp_seb'];
-const CHAT_LINES=[
+/* ponytail: 3 bot personas — safe, balanced, degen — so the live feed reads like
+	   a real lobby instead of 10 identical cash-out profiles. */
+	const BOT_PERSONAS=[
+	  {id:'safe',   join:0.48, cashMin:1.2, cashMax:2.0, betMin:0.02, betMax:0.07, tilt:1.5, color:'#b8c4d8'},
+	  {id:'bal',    join:0.65, cashMin:1.5, cashMax:4.5, betMin:0.05, betMax:0.12, tilt:3.0, color:'#36c6ff'},
+	  {id:'degen',  join:0.72, cashMin:1.8, cashMax:12,  betMin:0.08, betMax:0.25, tilt:5.0, color:'#ff6b3d'},
+	];
+	const BOT_NAMES=['rocketrick','luna7','crashkid','bigben','moonmax','fomo_fred','diamond_dan','zenbetter','sally_skins','luckyleo','titan_t','cryptocat','betbomber','astrid_99','gimme_grn','vividvivi','risk_rita','safesam','mr_multi','hodl_hero','spacemonkey','pepe_pt','nosleep_tv','vicki_vault','scalp_seb','brave_betty','crypto_carl','oh_no_ozzy','lux_lane','ape_strong'];
+	const BOTS=[];
+	function initBots(){
+	  BOTS.length=0;
+	  for(let i=0;i<12;i++){
+	    const p=BOT_PERSONAS[i%3];
+	    BOTS.push({
+	      name:BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)]+Math.floor(Math.random()*99),
+	      bal:200+Math.floor(Math.random()*5000),
+	      persona:p, // ponytail: static persona so each bot behaves consistently
+	    });
+	  }
+	}
+	function botRoundStart(){
+	  const aggroBias=volDrift<-0.5?0.15:volDrift>0.5?-0.1:0;
+	  for(const bot of BOTS){
+	    const p=bot.persona;
+	    const joinChance=Math.min(0.85, p.join+aggroBias);
+	    if(Math.random()<joinChance){
+	      const betPct=p.betMin+Math.random()*(p.betMax-p.betMin);
+	      bot.bet=Math.max(1, Math.round(bot.bal*betPct));
+	      const cashRange=(p.cashMax-p.cashMin);
+	      const boost=volDrift<-0.5?0.3:volDrift>0.5?-0.1:0;
+	      bot.cashAt=p.cashMin+Math.random()*cashRange*(1+boost);
+	      bot.cashAt=Math.min(bot.cashAt, p.cashMax*1.2);
+	      bot.in=true;
+	    } else bot.in=false;
+	    bot.cashed=false; bot.cashMult=0;
+	  }
+	  renderBotsTable();
+	}
+	const CHAT_LINES=[
   {u:'rocketrick',t:'gl on this one 🚀'},{u:'luna7',t:'feels like a big one'},
   {u:'crashkid',t:'went all in lol'},{u:'fomo_fred',t:'FOMO is real'},
   {u:'moonmax',t:'to the moon 🌙'},{u:'diamond_dan',t:'diamond hands 💎'},
@@ -1630,63 +1734,53 @@ const CHAT_LINES=[
   {u:'BOOST',t:'Cash out before it busts 💸',cls:'sys'},
   {u:'BOOST',t:'Big win on the board! 🔥',cls:'sys'},
 ];
-const BOTS=[];
-function initBots(){ BOTS.length=0; for(let i=0;i<10;i++){ BOTS.push({name:BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)]+Math.floor(Math.random()*99),bal:200+Math.floor(Math.random()*5000)}); } }
-function pickBot(){ return BOTS[Math.floor(Math.random()*BOTS.length)]; }
-function botRoundStart(){
-  for(const bot of BOTS){
-    // ~60% of bots join each round; bet 2-17% of balance; cash target 1.3-5.8x
-    if(Math.random()<0.6){ bot.bet=Math.max(1, Math.round(bot.bal*(0.02+Math.random()*0.15))); bot.cashAt=1.3+Math.random()*4.5; bot.in=true; }
-    else bot.in=false;
-    bot.cashed=false; bot.cashMult=0;
-  }
-  renderBotsTable();   // show live bettors as soon as bets are placed
-}
-/* ---------- Live bettors table (Aviator/Stake-style) ----------
+	/* ---------- Live bettors table (Aviator/Stake-style) ----------
    Persistent panel during the round: bots + the player's own bets appear
    during BET, cash out green in real time during FLY, bust red at CRASH.
    This is the social-proof / FOMO engine. */
 let feedEl=null;
-function fmtShort(n){ n=Number(n)||0; if(n>=1000)return (n/1000).toFixed(1)+'k'; return n.toLocaleString(); }
-function renderBotsTable(){
-  if(!feedEl)feedEl=document.getElementById('liveFeed'); if(!feedEl)return;
-  const playerBets=G.bets.filter(b=>b.placed);
-  const inBots=BOTS.filter(b=>b.in);
-  const rows=[];
-  for(const b of playerBets){
-    let st='wait',win='';
-    if(b.cashedOut){ st='cash'; win='+'+fmtShort(b.winAmt)+' @ '+b.cashMult.toFixed(2)+'×'; }
-    else if(G.phase===PH.CRASH){ st='bust'; }
-    rows.push({you:true,name:'you',bet:b.amount,st,win}); // ponytail: bet slot has .amount, not .bet — was throwing on every placed bet
-  }
-  for(const bot of inBots){
-    let st='wait',win='';
-    if(bot.cashed){ st='cash'; win='+'+fmtShort(Math.round(bot.bet*bot.cashMult))+' @ '+bot.cashMult.toFixed(2)+'×'; }
-    else if(G.phase===PH.CRASH){ st='bust'; }
-    rows.push({you:false,name:bot.name,bet:bot.bet,st,win});
-  }
-  // cashed rows first, then waiting, then bust — mirrors the "winners rise" feel
-  const order={cash:0,wait:1,bust:2};
-  rows.sort((a,b)=>order[a.st]-order[b.st]);
-  feedEl.innerHTML=rows.map(r=>{
-    const tag=r.you?'<span style="color:var(--gold);font-weight:900">YOU</span>':'<span class="nm">'+r.name+'</span>';
-    const right=r.st==='cash'?'<span class="amt" style="color:var(--grn);font-weight:800">'+r.win+'</span>'
-              :r.st==='bust'?'<span style="color:var(--red);font-weight:700">bust</span>'
-              :'<span class="amt" style="color:var(--dim)">'+fmtShort(r.bet)+'</span>';
-    return '<div class="lfrow '+r.st+'"><div>'+tag+'</div><div>'+right+'</div></div>';
-  }).join('');
-}
+	function fmtShort(n){ n=Number(n)||0; if(n>=1000)return (n/1000).toFixed(1)+'k'; return n.toLocaleString(); }
+	function renderBotsTable(){
+	  if(!feedEl)feedEl=document.getElementById('liveFeed'); if(!feedEl)return;
+	  const playerBets=G.bets.filter(b=>b.placed);
+	  const inBots=BOTS.filter(b=>b.in);
+	  const rows=[];
+	  for(const b of playerBets){
+	    let st='wait',win='';
+	    if(b.cashedOut){ st='cash'; win='+'+fmtShort(b.winAmt)+' @ '+b.cashMult.toFixed(2)+'×'; }
+	    else if(G.phase===PH.CRASH){ st='bust'; }
+	    rows.push({you:true,name:'you',bet:b.amount,st,win}); // ponytail: bet slot has .amount, not .bet — was throwing on every placed bet
+	  }
+	  for(const bot of inBots){
+	    let st='wait',win='';
+	    if(bot.cashed){ st='cash'; win='+'+fmtShort(Math.round(bot.bet*bot.cashMult))+' @ '+bot.cashMult.toFixed(2)+'×'; }
+	    else if(G.phase===PH.CRASH){ st='bust'; }
+	    rows.push({you:false,name:bot.name,bet:bot.bet,st,win,color:bot.persona.color});
+	  }
+	  // cashed rows first, then waiting, then bust — mirrors the "winners rise" feel
+	  const order={cash:0,wait:1,bust:2};
+	  rows.sort((a,b)=>order[a.st]-order[b.st]);
+	  feedEl.innerHTML=rows.map(r=>{
+	    const tag=r.you?'<span style="color:var(--gold);font-weight:900">YOU</span>':'<span class="nm">'+r.name+'</span>';
+	    const right=r.st==='cash'?'<span class="amt" style="color:var(--grn);font-weight:800">'+r.win+'</span>'
+	              :r.st==='bust'?'<span style="color:var(--red);font-weight:700">bust</span>'
+	              :'<span class="amt" style="color:var(--dim)">'+fmtShort(r.bet)+'</span>';
+	    const dot=r.color?'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:'+r.color+';margin-right:4px;vertical-align:middle"></span>':'';
+	    return '<div class="lfrow '+r.st+'"><div>'+tag+'</div><div>'+dot+right+'</div></div>';
+	  }).join('');
+	}
 /* Called every frame during flight — bots cash out live as the multiplier climbs */
 function botMaybeCash(mult){
-  let anyCashed=false;
-  for(const bot of BOTS){
-    if(bot.in && !bot.cashed && bot.cashAt<=mult){
-      bot.cashed=true; bot.cashMult=mult;
-      anyCashed=true;
-    }
-  }
-  if(anyCashed){ renderBotsTable(); A.cashout(2); haptic(8); }
-}
+	  let anyCashed=false;
+	  for(const bot of BOTS){
+	    if(bot.in && !bot.cashed && bot.cashAt<=mult){
+	      bot.cashed=true; bot.cashMult=mult;
+	      anyCashed=true;
+	    }
+	  }
+	  // ponytail: throttle bot table re-render to 150ms — prevents innerHTML spam at 60fps
+	  if(anyCashed){ const now=performance.now(); if(now-(G._lastBotRender||0)>150){ G._lastBotRender=now; renderBotsTable(); A.cashout(2); haptic(8); } }
+	}
 function botRoundEnd(crashAt){
   for(const bot of BOTS){
     if(!bot.in) continue;
@@ -1696,12 +1790,27 @@ function botRoundEnd(crashAt){
   }
   renderBotsTable();   // final state: winners green, losers red
 }
-let chatTimer=null;
-function startChat(){
-  if(chatTimer) return;
-  const tick=()=>{ const L=CHAT_LINES[Math.floor(Math.random()*CHAT_LINES.length)]; const m=document.createElement('div'); m.className='cmsg'; m.innerHTML='<span class="u '+(L.cls||'')+'">'+L.u+'</span> '+L.t; const bar=document.getElementById('chatBar'); if(bar){ bar.appendChild(m); while(bar.children.length>4) bar.firstChild.remove(); setTimeout(()=>{ m.style.transition='opacity .4s'; m.style.opacity='0'; setTimeout(()=>m.remove(),400); }, 9000); } chatTimer=setTimeout(tick, 3500+Math.random()*5000); };
-  chatTimer=setTimeout(tick, 2500);
-}
+	let chatTimer=null;
+	function startChat(){
+	  if(chatTimer) return;
+	  const tick=()=>{
+	    // ponytail: 30% of messages use a real active bot name for authenticity
+	    let u,cl='',t;
+	    if(Math.random()<0.3 && BOTS.length>0){
+	      const bot=BOTS[Math.floor(Math.random()*BOTS.length)];
+	      u=bot.name; cl='';
+	      const phrases=['gl all','let\'s go','cash is king','🤑','one more','🚀','fingers crossed','can feel it','big one coming','easy money','nerves 💀','hodl','yeet','not today','gg','wp','let it ride','💰','need this win','alright','breathe'];
+	      t=phrases[Math.floor(Math.random()*phrases.length)];
+	    } else {
+	      const L=CHAT_LINES[Math.floor(Math.random()*CHAT_LINES.length)];
+	      u=L.u; cl=L.cls||''; t=L.t;
+	    }
+	    const m=document.createElement('div'); m.className='cmsg'; m.innerHTML='<span class="u '+cl+'">'+u+'</span> '+t;
+	    const bar=document.getElementById('chatBar'); if(bar){ bar.appendChild(m); while(bar.children.length>4) bar.firstChild.remove(); setTimeout(()=>{ m.style.transition='opacity .4s'; m.style.opacity='0'; setTimeout(()=>m.remove(),400); }, 9000); }
+	    chatTimer=setTimeout(tick, 3500+Math.random()*5000);
+	  };
+	  chatTimer=setTimeout(tick, 2500);
+	}
 
 /* ---------- Share card for big wins ---------- */
 function showShareCard(mult,win){
