@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="BOOST — a skill-based crash game. Time the multiplier, cash out before it busts. Bet, climb, and chase the leaderboard. No real money.">
+<!-- Open Graph / social link preview — generates a rich card when the game URL is shared -->
+<meta property="og:title" content="BOOST — Cash Out Before It Busts">
+<meta property="og:description" content="A skill-based crash game. Time the multiplier, cash out before it busts. Free virtual coins. No real money.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://maxween.com">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="BOOST — Cash Out Before It Busts">
+<meta name="twitter:description" content="Crash game. Time the multiplier, cash out before it busts. Free virtual coins.">
 <meta name="theme-color" content="#06040c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -643,7 +651,7 @@ const A=(()=>{
   let padSet=ST.aMinor;
   const NOTE=(n)=>440*Math.pow(2,(n-69)/12);
 
-  function c(){ if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); buildBus(); }catch(e){} } return ac; }
+	function c(){ if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); buildBus(); }catch(e){} } if(ac&&ac.state==='suspended') try{ ac.resume(); }catch(e){} return ac; }
 
   function buildBus(){
     if(master)return;
@@ -1819,10 +1827,55 @@ function showShareCard(mult,win){
   document.getElementById('shareCard').classList.add('show');
 }
 document.getElementById('shareClose').onclick=()=>document.getElementById('shareCard').classList.remove('show');
+/* ponytail: generates a real PNG of the win for native share sheet (vs plain text).
+   No libraries — one offscreen canvas, drawn in the game's visual style.
+   Falls back cleanly to text-only on desktop or when canShare rejects files. */
+async function generateShareImage(mult,win){
+  const c=document.createElement('canvas'); c.width=600; c.height=340;
+  const x=c.getContext('2d');
+  // Background gradient matching game theme
+  const bg=x.createLinearGradient(0,0,0,340);
+  bg.addColorStop(0,'#1a0e30'); bg.addColorStop(.5,'#0e2538'); bg.addColorStop(1,'#06040c');
+  x.fillStyle=bg; x.fillRect(0,0,600,340);
+  // Border glow (two strokes: soft outer + bright inner)
+  x.strokeStyle='rgba(255,199,64,.5)'; x.lineWidth=2; x.strokeRect(10,10,580,320);
+  x.strokeStyle='rgba(255,199,64,.12)'; x.lineWidth=1; x.strokeRect(14,14,572,312);
+  // Logo
+  x.fillStyle='#ffc740'; x.font='900 26px system-ui,sans-serif'; x.textAlign='center'; x.textBaseline='middle';
+  x.shadowColor='rgba(255,199,64,.4)'; x.shadowBlur=14; x.fillText('▲ BOOST',300,36); x.shadowBlur=0;
+  // "BIG WIN" label
+  x.fillStyle='rgba(255,199,64,.55)'; x.font='700 13px system-ui,sans-serif'; x.fillText('BIG WIN',300,72);
+  // Multiplier — gold→orange gradient
+  const g=x.createLinearGradient(180,0,420,0);
+  g.addColorStop(0,'#ffc740'); g.addColorStop(1,'#ff6b3d');
+  x.fillStyle=g; x.font='900 76px system-ui,sans-serif'; x.shadowColor='rgba(255,199,64,.3)'; x.shadowBlur=20;
+  x.fillText(mult.toFixed(2)+'×',300,180); x.shadowBlur=0;
+  // Win amount — green
+  x.fillStyle='#2ee68a'; x.font='800 32px system-ui,sans-serif'; x.shadowColor='rgba(46,230,138,.25)'; x.shadowBlur=12;
+  x.fillText('+'+win.toLocaleString()+' 🪙',300,240); x.shadowBlur=0;
+  // Streak badge
+  if(SAVE.winStreak>=2){ x.fillStyle='rgba(255,199,64,.5)'; x.font='700 14px system-ui,sans-serif'; x.fillText('🔥 '+SAVE.winStreak+' win streak!',300,278); }
+  // Brand
+  x.fillStyle='rgba(139,131,152,.45)'; x.font='600 11px system-ui,sans-serif'; x.fillText('maxween.com',300,316);
+  return new Promise(r=>c.toBlob(r,'image/png'));
+}
 document.getElementById('shareCopy').onclick=async ()=>{
-  const txt='🚀 BOOST! Just hit '+document.getElementById('shareMult').textContent+' for '+document.getElementById('shareAmt').textContent+'!';
-  try{ if(navigator.share){ await navigator.share({title:'BOOST',text:txt}); } else { await navigator.clipboard.writeText(txt); toast('📋 Copied to clipboard!'); } }
-  catch(e){ try{ await navigator.clipboard.writeText(txt); toast('📋 Copied!'); }catch(e2){ toast(txt); } }
+  const mult=parseFloat(document.getElementById('shareMult').textContent)||1;
+  const amt=parseInt((document.getElementById('shareAmt').textContent||'0').replace(/[^0-9]/g,''));
+  const txt='🚀 BOOST! Just cashed '+mult.toFixed(2)+'× → +'+amt.toLocaleString()+' 🪙';
+  try{
+    if(navigator.share){
+      const blob=await generateShareImage(mult,amt);
+      const file=new File([blob],'boost-win.png',{type:'image/png'});
+      // ponytail: canShare checks if the platform supports file sharing in the native sheet
+      if(navigator.canShare&&navigator.canShare({files:[file]}))
+        await navigator.share({title:'BOOST',text:txt,files:[file]});
+      else await navigator.share({title:'BOOST',text:txt});
+    } else { await navigator.clipboard.writeText(txt); toast('📋 Copied!'); }
+  }catch(e){
+    try{ await navigator.clipboard.writeText(txt); toast('📋 Copied!'); }
+    catch(e2){ toast(txt); }
+  }
 };
 
 /* ---------- Daily chest (free coins w/ suspense) ---------- */
