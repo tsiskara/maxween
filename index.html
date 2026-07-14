@@ -582,7 +582,6 @@ function randHex(n){
 		   ponytail: this is not foolproof — a determined attacker using a debugger
 		   can bypass anything client-side. But it raises the bar from "open console,
 		   type crashFromHash = ..." to "write a custom debugger script". */
-		let _cfhSig=_saveChecksum('crashFromHash:'+CFG.HOUSE_EDGE+':'+CFG.GROWTH);
 		function crashFromHash(hashHex){
 		  // Quick integrity check at each call — negligible perf cost
 		  if(!window.CFG||window.CFG.HOUSE_EDGE!==0.01) return 1.00;
@@ -1790,7 +1789,7 @@ function openSettings(){
     '<div class="setrow"><div><div class="nm">Haptics</div><div class="ds">Vibration on mobile</div></div><div class="toggle '+(s.haptics?'on':'')+'" id="hTog"></div></div>'+
     '<div class="setrow"><div><div class="nm">Sound</div><div class="ds">Mute / unmute all audio</div></div><div class="toggle '+(!SAVE.mute?'on':'')+'" id="muteTog"></div></div>';
   document.getElementById('musicRange').oninput=e=>{ s.musicVol=Number(e.target.value)/100; A.setMusicVol(s.musicVol); save(); };
-  document.getElementById('musicTog').onclick=function(){ s.music=!s.music; this.classList.toggle('on'); A.setMusicOn(s.music); syncMusicBtn(); save(); };
+  document.getElementById('musicTog').onclick=function(){ s.music=!s.music; this.classList.toggle('on'); A.setMusicOn(s.music); save(); };
   document.getElementById('volRange').oninput=e=>{ s.volume=Number(e.target.value)/100; SAVE.volume=s.volume; A.setVol(s.volume); save(); };
   document.getElementById('rmTog').onclick=function(){ s.reducedMotion=!s.reducedMotion; this.classList.toggle('on'); save(); };
   document.getElementById('hTog').onclick=function(){ s.haptics=!s.haptics; this.classList.toggle('on'); save(); };
@@ -1851,7 +1850,6 @@ document.getElementById('freeBtn').onclick=openChest;
 const headerMuteBtn=document.createElement('button'); headerMuteBtn.className='icbtn'; headerMuteBtn.textContent='🔊'; headerMuteBtn.id='muteBtn'; headerMuteBtn.title='Sound';
 headerMuteBtn.onclick=function(){ SAVE.mute=!SAVE.mute; save(); this.textContent=SAVE.mute?'🔇':'🔊'; A.setMute(SAVE.mute); };
 document.querySelector('.navbtns').appendChild(headerMuteBtn);
-function syncMusicBtn(){ /* no-op: music button removed from header; controlled via Settings */ }
 document.getElementById('logoBtn').onclick=()=>{ A.tick(); openMore(); };
 document.getElementById('lbxBtn').onclick=()=>{ A.tick(); openLuckyBox(); };
 document.getElementById('lvlBar').onclick=()=>{ A.tick(); toast('LV '+SAVE.level+' \u00b7 '+levelTitle(SAVE.level)+' \u00b7 '+SAVE.xp+'/'+xpForLevel(SAVE.level)+' XP'); };
@@ -2305,7 +2303,7 @@ function init(){
   resize(); genBg(); checkMissionReset();
   document.getElementById('balance').textContent=Math.round(SAVE.balance).toLocaleString();
   headerMuteBtn.textContent=SAVE.mute?'🔇':'🔊';
-  G.balance=SAVE.balance; A.setMute(SAVE.mute); A.setVol(SAVE.settings.volume); A.setMusicVol(SAVE.settings.musicVol||0.45); A.setMusicOn(SAVE.settings.music!==false); syncMusicBtn();
+  G.balance=SAVE.balance; A.setMute(SAVE.mute); A.setVol(SAVE.settings.volume); A.setMusicVol(SAVE.settings.musicVol||0.45); A.setMusicOn(SAVE.settings.music!==false);
   renderHistory(); updateStats(); updateAchBadge(); updateMisBadge(); updateStreakInd(); renderBets();
   updateLevelBar(); updateLbxBtn();
   initBots(); startChat();
