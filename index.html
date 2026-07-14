@@ -365,7 +365,7 @@ main{flex:1; position:relative; margin:0 10px 6px; border-radius:22px; overflow:
 @media (max-width:420px){ .lvlbar{display:none} }
 
 	/* ====== v4.5 — fly-phase overlay dimming (keep canvas clear) ====== */
-	main.flying #liveFeed{opacity:0.12;pointer-events:none;transition:opacity .5s ease;width:100px}
+		main.flying #liveFeed{opacity:0.42;pointer-events:none;transition:opacity .5s ease;width:100px}
 	main.flying #chatBar{display:none}
 	main.flying #banner{top:15%!important}
 	main.flying #streakInd{opacity:0.35;transition:opacity .5s}
@@ -940,10 +940,13 @@ const A=(()=>{
     whoosh(){ noise(.3,.15,700); },
     levelUp(){ [523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>tone(f,.12,'triangle',.16),i*70)); setTimeout(()=>{tone(1046,.4,'sine',.1);tone(1568,.4,'sine',.08);},420); },
     lbxOpen(rarity){ const base=rarity==='legendary'?880:rarity==='epic'?660:rarity==='rare'?523:440; [base,base*1.25,base*1.5].forEach((f,i)=>setTimeout(()=>tone(f,.14,'triangle',.15),i*90)); if(rarity==='legendary')setTimeout(()=>tone(base*2,.5,'sine',.12),300); },
-	    comboTick(n){ tone(600+Math.min(n,12)*60,.06,'square',.1); },
-	    count(){ tone(660,.04,'square',.06); },
-	    /* ponytail: iOS Safari suspends AudioContext until a user gesture calls resume() */
-	    resume(){ const x=ac; if(x && x.state==='suspended') try{ x.resume(); }catch(e){} },
+		    comboTick(n){ tone(600+Math.min(n,12)*60,.06,'square',.1); },
+		    count(){ tone(660,.04,'square',.06); },
+		    /* ponytail: launch countdown — descending 3-2-1 beeps that build tension.
+		       Emulates real rocket countdown audio. Silent at competitors. */
+		    countdown(s){ if(s<1||s>3)return; const f=600-(3-s)*120; tone(f,.08,'square',.12); haptic(10); },
+		    /* ponytail: iOS Safari suspends AudioContext until a user gesture calls resume() */
+		    resume(){ const x=ac; if(x && x.state==='suspended') try{ x.resume(); }catch(e){} },
 	  };
 })();
 
@@ -1053,7 +1056,7 @@ window.addEventListener('resize',resize);
 	  // cleanup stray float text from previous round
 	  const fl=document.getElementById('floatLayer');
 	  if(fl){ while(fl.firstChild) fl.removeChild(fl.firstChild); }
-	  G.phase=PH.BET; G.phaseT=0; G.mult=1; G.elapsed=0; G.curve=[]; G.embers=[]; G.smoke=[];
+	G.phase=PH.BET; G.phaseT=0; G.mult=1; G.elapsed=0; G.curve=[]; G.embers=[]; G.smoke=[]; G._lastCountdown=0;
   G.particles=[]; G.coins=[]; G.confetti=[]; G.rings=[]; G.debris=[]; G.bustScale=0;
   for(const b of G.bets){ b.placed=false; b.cashedOut=false; b.cashMult=0; b.winAmt=0; }
   setPhase('PLACE YOUR BETS','',false);
@@ -1088,39 +1091,41 @@ window.addEventListener('resize',resize);
 		  document.getElementById('gameMain').classList.remove('flying');
 		  G.phase=PH.CRASH; G.phaseT=0; G.mult=G.crashAt;
 		  A.crash(); A.stopFlight(); A.musicCrash(); haptic([50,30,80]);
-		  // Intensity-scaled explosion: higher crash = bigger boom
-		  const intensity=Math.min(1, (G.crashAt-1)/9); // 0..1 based on crash multiplier
-		  const shakeAmt=Math.round(8+intensity*20);
-		  G.shake=SAVE.settings.reducedMotion?0:shakeAmt;
-		  G.flash=SAVE.settings.reducedMotion?0:Math.min(0.9, 0.3+intensity*0.5);
+			  // Intensity-scaled explosion: higher crash = bigger boom
+			  // ponytail: instant bust (1.00×) should feel like a fizzle, not a bomb
+			  const intensity=Math.min(1, (G.crashAt-1)/9); // 0..1 based on crash multiplier
+			  const fizzle=Math.min(1, intensity*3); // 0 at 1.00×, 1 at 1.33×+
+			  const shakeAmt=Math.round(2+fizzle*26);
+			  G.shake=SAVE.settings.reducedMotion?0:shakeAmt;
+			  G.flash=SAVE.settings.reducedMotion?0:fizzle*0.8;
 		  G.flashColor='255,60,70';
-		  G.flash2=SAVE.settings.reducedMotion?0:0.35+(intensity*0.25);
-		  G.flash2Color='255,255,255'; // brief white punch before red
-		  G.bustScale=0;
-	  if(!SAVE.settings.reducedMotion){
-	    const particleCount=28+Math.round(intensity*28);
-	    burst(G.rocketX,G.rocketY,particleCount,'#ff8b3d',300+intensity*200);
-	    burst(G.rocketX,G.rocketY,Math.round(particleCount*0.7),'#ff3b5c',240+intensity*160);
-	    burst(G.rocketX,G.rocketY,Math.round(particleCount*0.5),'#ffc740',180+intensity*120);
-	    // Ring explosion — scales with intensity
-	    G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:0.5+intensity*0.3,age:0,col:'255,255,255',maxR:Math.max(W,H)*0.6});
-	    G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:0.8+intensity*0.4,age:0,col:'255,60,70',maxR:Math.max(W,H)});
-	    if(intensity>0.5) G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:1.2,age:0,col:'255,199,64',maxR:Math.max(W,H)*0.8});
-	    // Debris — more pieces, bigger spread for high crashes
-	    const debrisN=10+Math.round(intensity*16);
-	    for(let i=0;i<debrisN;i++){
-	      const a=Math.random()*6.28;
-	      const speed=120+Math.random()*(200+intensity*200);
-	      G.debris.push({x:G.rocketX,y:G.rocketY,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed-80,life:0.8+Math.random()*.7+intensity*0.3,age:0,r:2+Math.random()*4+intensity*2,rot:Math.random()*6,vr:(Math.random()-.5)*(8+intensity*6),col:['#ff8b3d','#ff3b5c','#ffc740','#ff6b3d'][Math.floor(Math.random()*4)]});
-	    }
-	    // Smoke cloud for big explosions
-	    if(intensity>0.3){
-	      for(let i=0;i<6+intensity*8;i++){
-	        const a=Math.random()*6.28;
-	        G.smoke.push({x:G.rocketX+(Math.random()-.5)*20,y:G.rocketY+(Math.random()-.5)*20,vx:Math.cos(a)*(20+intensity*30),vy:Math.sin(a)*(20+intensity*30)-10,r:6+Math.random()*8,a:0.4+Math.random()*0.3});
-	      }
-	    }
-	  }
+			  G.flash2=SAVE.settings.reducedMotion?0:fizzle*0.5;
+			  G.flash2Color='255,255,255'; // brief white punch before red
+			  G.bustScale=0;
+			  if(!SAVE.settings.reducedMotion){
+			    const particleCount=4+Math.round(fizzle*52);
+		    burst(G.rocketX,G.rocketY,particleCount,'#ff8b3d',300+fizzle*200);
+		    burst(G.rocketX,G.rocketY,Math.round(particleCount*0.7),'#ff3b5c',240+fizzle*160);
+		    burst(G.rocketX,G.rocketY,Math.round(particleCount*0.5),'#ffc740',180+fizzle*120);
+		    // Ring explosion — scales with intensity
+		    G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:0.5+fizzle*0.3,age:0,col:'255,255,255',maxR:Math.max(W,H)*0.6});
+		    G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:0.8+fizzle*0.4,age:0,col:'255,60,70',maxR:Math.max(W,H)});
+		    if(fizzle>0.5) G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:1.2,age:0,col:'255,199,64',maxR:Math.max(W,H)*0.8});
+		    // Debris — more pieces, bigger spread for high crashes
+		    const debrisN=2+Math.round(fizzle*24);
+		    for(let i=0;i<debrisN;i++){
+		      const a=Math.random()*6.28;
+		      const speed=60+Math.random()*(100+fizzle*300);
+		      G.debris.push({x:G.rocketX,y:G.rocketY,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed-40,life:0.5+Math.random()*.5+fizzle*0.5,age:0,r:1+Math.random()*2+fizzle*4,rot:Math.random()*6,vr:(Math.random()-.5)*(4+fizzle*10),col:['#ff8b3d','#ff3b5c','#ffc740','#ff6b3d'][Math.floor(Math.random()*4)]});
+		    }
+		    // Smoke cloud for big explosions
+		    if(fizzle>0.3){
+		      for(let i=0;i<2+fizzle*12;i++){
+		        const a=Math.random()*6.28;
+		        G.smoke.push({x:G.rocketX+(Math.random()-.5)*20,y:G.rocketY+(Math.random()-.5)*20,vx:Math.cos(a)*(10+fizzle*40),vy:Math.sin(a)*(10+fizzle*40)-10,r:4+Math.random()*4+fizzle*8,a:0.2+Math.random()*0.2+fizzle*0.2});
+		      }
+		    }
+		  }
   setPhase('BUSTED','',false,true);
   let anyWon=false, anyLost=false, maxCash=0, safeCashes=0;
   for(const b of G.bets){
@@ -1325,8 +1330,19 @@ function loop(ts){
   }
   if(G.phase===PH.BET){
     G.phaseT+=dt; const left=Math.max(0,(CFG.BET_TIME-G.phaseT)/1000);
-    document.getElementById('ringBig').textContent=Math.ceil(left);
+    const ceilLeft=Math.ceil(left);
+    document.getElementById('ringBig').textContent=ceilLeft;
     document.getElementById('ringFg').style.strokeDashoffset=(301.6*G.phaseT/CFG.BET_TIME).toFixed(1);
+    // ponytail: launch countdown beep + ring urgency in last 3 seconds — silent at competitors
+    const ringEl=document.getElementById('ringBig');
+    if(ceilLeft<=3&&ceilLeft>0){
+      ringEl.style.color='var(--red)';
+      ringEl.style.textShadow='0 0 20px rgba(255,59,92,.8)';
+      if(ceilLeft!==G._lastCountdown){ G._lastCountdown=ceilLeft; A.countdown(ceilLeft); }
+    } else {
+      ringEl.style.color='';
+      ringEl.style.textShadow='';
+    }
     const anyPlaced=G.bets.some(b=>b.placed);
     setPhase((anyPlaced?'LOCKED IN':'PLACE YOUR BETS')+' · '+left.toFixed(1)+'s','',anyPlaced);
     if(G.phaseT>=CFG.BET_TIME) startFlight();
@@ -1455,13 +1471,15 @@ function drawCurve(){
    A resting rocket idles at the launch origin with a pulsing pad glow +
    gentle hover, so the canvas is alive before flight. Honors reducedMotion. */
 function drawIdleRocket(){
-  const sk=skinById(SAVE.equippedSkin);
-  const origin=plot(0,1);
-  const hover = SAVE.settings.reducedMotion ? 0 : Math.sin(G.time*0.003)*4;
-  const x=origin.x, y=origin.y-14+hover;
-  // launch-pad radial glow under the rocket
-  const pulse = SAVE.settings.reducedMotion ? 0.6 : (0.55+0.45*Math.sin(G.time*0.004));
-  const padR = 46 + (SAVE.settings.reducedMotion?0:pulse*10);
+	  const sk=skinById(SAVE.equippedSkin);
+	  const origin=plot(0,1);
+	  // ponytail: countdown urgency — rocket trembles + pad flares in last 2 seconds
+	  const countUrgency=G.phase===PH.BET?Math.min(1,Math.max(0,(CFG.BET_TIME-G.phaseT-2000)/1000)):0;
+	  const hover = SAVE.settings.reducedMotion ? 0 : Math.sin(G.time*0.003)*(4+countUrgency*6)+countUrgency*2;
+	  const x=origin.x, y=origin.y-14+hover;
+	  // launch-pad radial glow under the rocket
+	  const pulse = SAVE.settings.reducedMotion ? 0.6 : (0.55+0.45*Math.sin(G.time*0.004));
+	  const padR = 46 + (SAVE.settings.reducedMotion?0:pulse*(10+countUrgency*14));
   const pg=ctx.createRadialGradient(x,y+6,0,x,y+6,padR);
   pg.addColorStop(0,'rgba('+sk.trail+','+(0.28*pulse).toFixed(3)+')');
   pg.addColorStop(0.5,'rgba('+sk.trail+','+(0.10*pulse).toFixed(3)+')');
