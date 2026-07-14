@@ -1,0 +1,42 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4] [cursor=pointer]: ◆ FUSION
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: Score
+        - generic [ref=e8]: "0"
+      - generic [ref=e9]:
+        - generic [ref=e10]: Coins
+        - generic [ref=e11]: "0"
+  - main [ref=e12]:
+    - generic [ref=e14]:
+      - button "🛒" [ref=e15] [cursor=pointer]
+      - button "🔊" [ref=e16] [cursor=pointer]
+    - generic: NEXT
+    - generic [ref=e17]:
+      - generic [ref=e18]: FUSION
+      - generic [ref=e19]: Drop matching balls to merge them. Chain merges for combos. Reach the biggest star. Don't overflow the line.
+      - button "PLAY ▶" [ref=e20] [cursor=pointer]
+      - generic [ref=e21]: Tap / move / tap to drop. Combos = multipliers.
+    - generic:
+      - generic: GAME OVER
+      - generic: "0"
+      - generic:
+        - generic:
+          - generic: Coins +
+          - generic: "0"
+        - generic:
+          - generic: Best Combo
+          - generic: 0×
+        - generic:
+          - generic: Best
+          - generic: "0"
+      - generic:
+        - button "PLAY AGAIN"
+        - button "🛒 SHOP"
+    - generic:
+      - generic:
+        - generic: SHOP
+        - generic: 🪙 0
+      - button "CLOSE"
+    - generic [ref=e22]: FUSION · v1.0 · tap logo for menu

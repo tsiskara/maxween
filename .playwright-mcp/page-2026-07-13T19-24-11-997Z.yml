@@ -1,0 +1,135 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e3]:
+    - generic [ref=f1e4] [cursor=pointer]: ▲ BOOST
+    - generic [ref=f1e5]:
+      - generic [ref=f1e6]:
+        - generic [ref=f1e7]: 🪙
+        - generic [ref=f1e8]: 1,250
+        - button "+" [ref=f1e9] [cursor=pointer]
+      - generic "Your level & XP" [ref=f1e10] [cursor=pointer]:
+        - generic [ref=f1e11]:
+          - generic [ref=f1e12]: LV 1
+          - generic [ref=f1e13]: 0/100
+        - generic [ref=f1e15]: Rookie
+      - generic [ref=f1e16]:
+        - button "🏆 26" [ref=f1e134] [cursor=pointer]:
+          - text: 🏆
+          - generic [ref=f1e18]: "26"
+        - button "🎯" [ref=f1e19] [cursor=pointer]
+        - button "🎨" [ref=f1e20] [cursor=pointer]
+        - button "≡" [ref=f1e21] [cursor=pointer]
+        - button "🔊" [active] [ref=f1e22] [cursor=pointer]
+  - generic [ref=f1e23]:
+    - generic [ref=f1e135]: 1.16×
+    - generic [ref=f1e136]: 2.11×
+    - generic [ref=f1e137]: 1.09×
+    - generic [ref=f1e138]: 2.07×
+    - generic [ref=f1e139]: 1.02×
+    - generic [ref=f1e140]: 2.19×
+    - generic [ref=f1e141]: 1.14×
+    - generic [ref=f1e142]: 1.00×
+    - generic [ref=f1e143]: 7.00×
+    - generic [ref=f1e144]: 1.28×
+    - generic [ref=f1e145]: 1.50×
+  - main [ref=f1e34]:
+    - generic:
+      - generic:
+        - generic: vicki_vault69 -73
+        - generic: busted
+      - generic:
+        - generic: bigben59 -247
+        - generic: busted
+      - generic:
+        - generic: luna764 -472
+        - generic: busted
+      - generic:
+        - generic: titan_t96 -170
+        - generic: busted
+    - generic:
+      - generic: luna7 feels like a big one
+      - generic: moonmax to the moon 🌙
+    - generic:
+      - generic: 🎉 BIG WIN
+      - generic: 10.00×
+      - generic: +0 🪙
+      - button "📋 COPY BRAG"
+      - button "✕"
+    - generic [ref=f1e36] [cursor=pointer]:
+      - generic [ref=f1e37]: Provably Fair
+      - generic [ref=f1e38]: 2bc28642ca061496…
+    - generic: BUSTED
+    - generic:
+      - generic: FLEW AWAY
+      - generic: 1.16×
+    - generic: Flew away @ 1.16×
+    - generic: 2× — LIFTOFF
+    - generic:
+      - generic: BOOST
+      - generic: Cash out before it busts
+      - generic: A multiplier climbs from 1.00×. It can bust any second. Cash out to lock your win. Wait too long → lose the bet.
+      - button "START ▶"
+      - generic: Free virtual coins · no real money
+  - generic [ref=f1e45]:
+    - generic [ref=f1e46]:
+      - generic [ref=f1e146]:
+        - generic [ref=f1e147]: SLOT 1
+        - generic [ref=f1e148]:
+          - generic [ref=f1e149]:
+            - generic [ref=f1e150]: BET
+            - spinbutton "Bet amount" [disabled] [ref=f1e151]: "10"
+          - generic [ref=f1e152]:
+            - generic [ref=f1e153]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [disabled] [ref=f1e154]: "2.00"
+        - generic [ref=f1e155]:
+          - button "½" [ref=f1e156] [cursor=pointer]
+          - button "2×" [ref=f1e157] [cursor=pointer]
+          - button "10" [ref=f1e158] [cursor=pointer]
+          - button "50" [ref=f1e159] [cursor=pointer]
+          - button "MAX" [ref=f1e160] [cursor=pointer]
+        - button "WAIT next round" [ref=f1e161]:
+          - text: WAIT
+          - generic [ref=f1e162]: next round
+      - generic [ref=f1e163]:
+        - generic [ref=f1e164]: SLOT 2
+        - generic [ref=f1e165]:
+          - generic [ref=f1e166]:
+            - generic [ref=f1e167]: BET
+            - spinbutton "Bet amount" [disabled] [ref=f1e168]: "20"
+          - generic [ref=f1e169]:
+            - generic [ref=f1e170]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [disabled] [ref=f1e171]: "2.00"
+        - generic [ref=f1e172]:
+          - button "½" [ref=f1e173] [cursor=pointer]
+          - button "2×" [ref=f1e174] [cursor=pointer]
+          - button "10" [ref=f1e175] [cursor=pointer]
+          - button "50" [ref=f1e176] [cursor=pointer]
+          - button "MAX" [ref=f1e177] [cursor=pointer]
+        - button "WAIT next round" [ref=f1e178]:
+          - text: WAIT
+          - generic [ref=f1e179]: next round
+    - generic [ref=f1e81]:
+      - button "↻ REPEAT" [disabled] [ref=f1e82]
+      - button "🤖 AUTO ×10" [ref=f1e83] [cursor=pointer]
+    - generic [ref=f1e84]:
+      - generic [ref=f1e85]:
+        - generic [ref=f1e86]: Wins
+        - generic [ref=f1e87]: "0"
+      - generic [ref=f1e88]:
+        - generic [ref=f1e89]: Losses
+        - generic [ref=f1e90]: "0"
+      - generic [ref=f1e91]:
+        - generic [ref=f1e92]: Best
+        - generic [ref=f1e93]: —
+      - generic [ref=f1e94]:
+        - generic [ref=f1e95]: Streak
+        - generic [ref=f1e96]: "0"
+      - generic [ref=f1e97]:
+        - generic [ref=f1e98]: Profit
+        - generic [ref=f1e99]: "+0"
+  - generic: 📅 Day 1 streak! Come back tomorrow for 150 🪙
+  - generic [ref=f1e180]:
+    - generic [ref=f1e181]: 💰
+    - generic [ref=f1e182]:
+      - generic [ref=f1e183]: Achievement Unlocked
+      - generic [ref=f1e184]: Pocket Change
+      - generic [ref=f1e185]: +100 🪙

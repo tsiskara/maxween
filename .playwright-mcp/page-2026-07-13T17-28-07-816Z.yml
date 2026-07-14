@@ -1,0 +1,70 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e3]:
+    - generic [ref=f1e4] [cursor=pointer]: ▲ BOOST
+    - generic [ref=f1e5]:
+      - generic [ref=f1e6]: 🪙
+      - generic [ref=f1e7]: 1,000
+      - button "+" [ref=f1e8] [cursor=pointer]
+    - button "🔊" [ref=f1e9] [cursor=pointer]
+  - generic [ref=f1e10]:
+    - generic [ref=f1e11]: 13.77×
+    - generic [ref=f1e12]: 1.29×
+    - generic [ref=f1e13]: 2.77×
+    - generic [ref=f1e14]: 1.90×
+    - generic [ref=f1e15]: 3.01×
+    - generic [ref=f1e16]: 1.35×
+    - generic [ref=f1e17]: 1.08×
+    - generic [ref=f1e18]: 2.99×
+  - main [ref=f1e19]:
+    - generic: READY
+    - generic: 1.00×
+    - generic: Bet closes in 6.0s
+    - generic [ref=f1e21]:
+      - generic [ref=f1e22]: BOOST
+      - generic [ref=f1e23]: A multiplier climbs from 1.00×. It can bust any second. Cash out before it does to win your bet × multiplier. Wait too long → you lose.
+      - generic [ref=f1e24]:
+        - generic [ref=f1e25]: ① Place a bet before each round
+        - generic [ref=f1e26]:
+          - text: ② Watch the
+          - generic [ref=f1e27]: multiplier
+          - text: rise
+        - generic [ref=f1e28]: ③ Tap CASH OUT to lock your win
+        - generic [ref=f1e29]: ④ If it busts first — you lose the bet
+      - button "START ▶" [ref=f1e30] [cursor=pointer]
+      - generic [ref=f1e31]: Free virtual coins · no real money
+  - generic [ref=f1e32]:
+    - generic [ref=f1e33]:
+      - generic [ref=f1e34]:
+        - generic [ref=f1e35]: BET
+        - spinbutton [ref=f1e36]: "10"
+        - button "−10" [ref=f1e37] [cursor=pointer]
+        - button "+10" [ref=f1e38] [cursor=pointer]
+      - generic [ref=f1e39]:
+        - generic [ref=f1e40]: AUTOCASHOUT
+        - spinbutton [ref=f1e41]: "2.00"
+    - generic [ref=f1e42]:
+      - button "½" [ref=f1e43] [cursor=pointer]
+      - button "2×" [ref=f1e44] [cursor=pointer]
+      - button "10" [ref=f1e45] [cursor=pointer]
+      - button "50" [ref=f1e46] [cursor=pointer]
+      - button "100" [ref=f1e47] [cursor=pointer]
+      - button "MAX" [ref=f1e48] [cursor=pointer]
+    - button "PLACE BET Next round · 1.00× potential" [ref=f1e49] [cursor=pointer]:
+      - text: PLACE BET
+      - generic [ref=f1e50]: Next round · 1.00× potential
+    - generic [ref=f1e51]:
+      - generic [ref=f1e52]: Auto-cashout at 2.00×
+      - generic [ref=f1e53]: "Potential: 20 🪙"
+    - generic [ref=f1e54]:
+      - generic [ref=f1e55]:
+        - generic [ref=f1e56]: Wins
+        - generic [ref=f1e57]: "0"
+      - generic [ref=f1e58]:
+        - generic [ref=f1e59]: Losses
+        - generic [ref=f1e60]: "0"
+      - generic [ref=f1e61]:
+        - generic [ref=f1e62]: Best
+        - generic [ref=f1e63]: —
+      - generic [ref=f1e64]:
+        - generic [ref=f1e65]: Profit
+        - generic [ref=f1e66]: "+0"

@@ -1,0 +1,142 @@
+- generic [ref=f5e2]:
+  - banner [ref=f5e3]:
+    - generic [ref=f5e4] [cursor=pointer]: ▲ BOOST
+    - generic [ref=f5e5]:
+      - generic [ref=f5e6]:
+        - generic [ref=f5e7]: 🪙
+        - generic [ref=f5e8]: 1,302
+        - button "+" [ref=f5e9] [cursor=pointer]
+      - generic [ref=f5e10]:
+        - button "🏆 25" [ref=f5e176] [cursor=pointer]:
+          - text: 🏆
+          - generic [ref=f5e12]: "25"
+        - button "🎯" [ref=f5e13] [cursor=pointer]
+        - button "🎨" [ref=f5e14] [cursor=pointer]
+        - button "≡" [ref=f5e15] [cursor=pointer]
+        - button "🔊" [ref=f5e16] [cursor=pointer]
+  - generic [ref=f5e17]:
+    - generic [ref=f5e177]: 1.34×
+    - generic [ref=f5e178]: 1.41×
+    - generic [ref=f5e180]: 11.59×
+    - generic [ref=f5e181]: 1.39×
+    - generic [ref=f5e182]: 1.09×
+    - generic [ref=f5e183]: 3.73×
+    - generic [ref=f5e184]: 1.56×
+    - generic [ref=f5e185]: 2.72×
+    - generic [ref=f5e186]: 1.64×
+    - generic [ref=f5e187]: 3.03×
+    - generic [ref=f5e188]: 5.36×
+    - generic [ref=f5e189]: 1.60×
+  - main [ref=f5e28]:
+    - generic:
+      - generic:
+        - generic: gimme_grn44
+        - generic: "22"
+      - generic:
+        - generic: rocketrick68
+        - generic: "545"
+      - generic:
+        - generic: spacemonkey14
+        - generic: "41"
+      - generic:
+        - generic: diamond_dan94
+        - generic: "95"
+      - generic:
+        - generic: sally_skins96
+        - generic: "284"
+      - generic:
+        - generic: risk_rita43
+        - generic: "308"
+    - generic: luna7 feels like a big one
+    - generic:
+      - generic: 🎉 BIG WIN
+      - generic: 10.00×
+      - generic: +0 🪙
+      - button "📋 COPY BRAG"
+      - button "✕"
+    - generic [ref=f5e30] [cursor=pointer]:
+      - generic [ref=f5e31]: Provably Fair
+      - generic [ref=f5e32]: 383ac0ac7806ce6e…
+    - generic: PLACE YOUR BETS · 1.3s
+    - generic: 1.00×
+    - generic:
+      - generic:
+        - generic: "2"
+        - generic: Launching
+    - generic: Flew away @ 1.34×
+    - generic:
+      - generic: BOOST
+      - generic: Cash out before it busts
+      - generic: A multiplier climbs from 1.00×. It can bust any second. Cash out to lock your win. Wait too long → lose the bet.
+      - button "START ▶"
+      - generic: Free virtual coins · no real money
+  - generic [ref=f5e39]:
+    - generic [ref=f5e40]:
+      - generic [ref=f5e190]:
+        - generic [ref=f5e191]: SLOT 1
+        - generic [ref=f5e192]:
+          - generic [ref=f5e193]:
+            - generic [ref=f5e194]: BET
+            - spinbutton "Bet amount" [ref=f5e195]: "10"
+          - generic [ref=f5e196]:
+            - generic [ref=f5e197]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=f5e198]: "1.20"
+        - generic [ref=f5e199]:
+          - button "½" [ref=f5e200] [cursor=pointer]
+          - button "2×" [ref=f5e201] [cursor=pointer]
+          - button "10" [ref=f5e202] [cursor=pointer]
+          - button "50" [ref=f5e203] [cursor=pointer]
+          - button "MAX" [ref=f5e204] [cursor=pointer]
+        - button "BET 10 auto @ 1.20×" [ref=f5e205] [cursor=pointer]:
+          - text: BET 10
+          - generic [ref=f5e206]: auto @ 1.20×
+      - generic [ref=f5e207]:
+        - generic [ref=f5e208]: SLOT 2
+        - generic [ref=f5e209]:
+          - generic [ref=f5e210]:
+            - generic [ref=f5e211]: BET
+            - spinbutton "Bet amount" [ref=f5e212]: "20"
+          - generic [ref=f5e213]:
+            - generic [ref=f5e214]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=f5e215]: "2.00"
+        - generic [ref=f5e216]:
+          - button "½" [ref=f5e217] [cursor=pointer]
+          - button "2×" [ref=f5e218] [cursor=pointer]
+          - button "10" [ref=f5e219] [cursor=pointer]
+          - button "50" [ref=f5e220] [cursor=pointer]
+          - button "MAX" [ref=f5e221] [cursor=pointer]
+        - button "BET 20 auto @ 2.00×" [ref=f5e222] [cursor=pointer]:
+          - text: BET 20
+          - generic [ref=f5e223]: auto @ 2.00×
+    - generic [ref=f5e75]:
+      - button "↻ REPEAT" [ref=f5e76] [cursor=pointer]
+      - button "🤖 AUTO ×10" [ref=f5e77] [cursor=pointer]
+    - generic [ref=f5e78]:
+      - generic [ref=f5e79]:
+        - generic [ref=f5e80]: Wins
+        - generic [ref=f5e81]: "1"
+      - generic [ref=f5e82]:
+        - generic [ref=f5e83]: Losses
+        - generic [ref=f5e84]: "0"
+      - generic [ref=f5e85]:
+        - generic [ref=f5e86]: Best
+        - generic [ref=f5e87]: 1.20×
+      - generic [ref=f5e88]:
+        - generic [ref=f5e89]: Streak
+        - generic [ref=f5e90]: "1"
+      - generic [ref=f5e91]:
+        - generic [ref=f5e92]: Profit
+        - generic [ref=f5e93]: "+2"
+  - generic: 📅 Day 1 streak! Come back tomorrow for 150 🪙
+  - generic [ref=f5e129]:
+    - generic [ref=f5e130]:
+      - generic [ref=f5e131]: ❓ How to Play
+      - button "✕" [ref=f5e132] [cursor=pointer]
+    - generic [ref=f5e134]:
+      - paragraph [ref=f5e135]: 1. Set your bet amount and optional auto-cashout for each slot.
+      - paragraph [ref=f5e136]: 2. Hit BET before the countdown ends. You can place up to 2 bets per round.
+      - paragraph [ref=f5e137]: 3. The rocket launches and the multiplier climbs. It can bust at any moment.
+      - paragraph [ref=f5e138]: 4. Tap CASH OUT to lock your win = bet × current multiplier.
+      - paragraph [ref=f5e139]: 5. If it busts before you cash out, you lose that bet.
+      - paragraph [ref=f5e140]: "Streaks: Consecutive wins add a bonus % to your payouts!"
+      - paragraph [ref=f5e141]: "Tip: Use 2 slots — one safe (low auto), one greedy (high auto)."

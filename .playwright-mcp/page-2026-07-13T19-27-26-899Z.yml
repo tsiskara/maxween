@@ -1,0 +1,124 @@
+- generic [ref=f4e2]:
+  - banner [ref=f4e3]:
+    - generic [ref=f4e4] [cursor=pointer]: ▲ BOOST
+    - generic [ref=f4e5]:
+      - generic [ref=f4e6]:
+        - generic [ref=f4e7]: 🪙
+        - generic [ref=f4e8]: 2,026
+        - button "+" [ref=f4e9] [cursor=pointer]
+      - generic "Your level & XP" [ref=f4e10] [cursor=pointer]:
+        - generic [ref=f4e11]:
+          - generic [ref=f4e12]: LV 2
+          - generic [ref=f4e13]: 182/255
+        - generic [ref=f4e15]: Cadet
+      - generic [ref=f4e16]:
+        - button "🏆 23" [ref=f4e110] [cursor=pointer]:
+          - text: 🏆
+          - generic [ref=f4e18]: "23"
+        - button "🎯 1" [ref=f4e111] [cursor=pointer]:
+          - text: 🎯
+          - generic [ref=f4e112]: "1"
+        - button "🎨" [ref=f4e22] [cursor=pointer]
+        - button "≡" [ref=f4e23] [cursor=pointer]
+        - button "🔊" [ref=f4e24] [cursor=pointer]
+  - generic [ref=f4e25]:
+    - generic [ref=f4e224]: 1.14×
+    - generic [ref=f4e226]: 1.00×
+    - generic [ref=f4e228]: 1.60×
+    - generic [ref=f4e230]: 5.43×
+    - generic [ref=f4e232]: 3.19×
+    - generic [ref=f4e233]: 4.18×
+    - generic [ref=f4e235]: 6.96×
+    - generic [ref=f4e236]: 1.57×
+    - generic [ref=f4e237]: 6.69×
+    - generic [ref=f4e238]: 1.44×
+    - generic [ref=f4e239]: 1.11×
+    - generic [ref=f4e240]: 4.59×
+    - generic [ref=f4e241]: 6.64×
+    - generic [ref=f4e242]: 3.46×
+    - generic [ref=f4e243]: 2.30×
+    - generic [ref=f4e244]: 3.48×
+  - main [ref=f4e41]:
+    - generic:
+      - generic: crashkid went all in lol
+      - generic: luna7 feels like a big one
+    - generic:
+      - generic: 🎉 BIG WIN
+      - generic: 10.00×
+      - generic: +0 🪙
+      - button "📋 COPY BRAG"
+      - button "✕"
+    - generic [ref=f4e45] [cursor=pointer]:
+      - generic [ref=f4e46]: Provably Fair
+      - generic [ref=f4e47]: ac6473b16dd72ec4…
+    - generic: LOCKED IN · 3.1s
+    - generic: 1.00×
+    - generic:
+      - generic:
+        - generic: "4"
+        - generic: Launching
+    - generic: BUSTED · You lost
+    - generic [ref=f4e48]:
+      - generic [ref=f4e49]: BOOST
+      - generic [ref=f4e50]: Cash out before it busts
+      - generic [ref=f4e51]: A multiplier climbs from 1.00×. It can bust any second. Cash out to lock your win. Wait too long → lose the bet.
+      - button "START ▶" [ref=f4e52] [cursor=pointer]
+      - generic [ref=f4e53]: Free virtual coins · no real money
+  - generic [ref=f4e54]:
+    - generic [ref=f4e55]:
+      - generic [ref=f4e245]:
+        - generic [ref=f4e246]: SLOT 1
+        - generic [ref=f4e247]:
+          - generic [ref=f4e248]:
+            - generic [ref=f4e249]: BET
+            - spinbutton "Bet amount" [disabled] [ref=f4e250]: "50"
+          - generic [ref=f4e251]:
+            - generic [ref=f4e252]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [disabled] [ref=f4e253]: "2.00"
+        - generic [ref=f4e254]:
+          - button "½" [ref=f4e255] [cursor=pointer]
+          - button "2×" [ref=f4e256] [cursor=pointer]
+          - button "10" [ref=f4e257] [cursor=pointer]
+          - button "50" [ref=f4e258] [cursor=pointer]
+          - button "MAX" [ref=f4e259] [cursor=pointer]
+        - button "CANCEL refund 50" [ref=f4e260] [cursor=pointer]:
+          - text: CANCEL
+          - generic [ref=f4e261]: refund 50
+      - generic [ref=f4e262]:
+        - generic [ref=f4e263]: SLOT 2
+        - generic [ref=f4e264]:
+          - generic [ref=f4e265]:
+            - generic [ref=f4e266]: BET
+            - spinbutton "Bet amount" [disabled] [ref=f4e267]: "50"
+          - generic [ref=f4e268]:
+            - generic [ref=f4e269]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [disabled] [ref=f4e270]: "2.00"
+        - generic [ref=f4e271]:
+          - button "½" [ref=f4e272] [cursor=pointer]
+          - button "2×" [ref=f4e273] [cursor=pointer]
+          - button "10" [ref=f4e274] [cursor=pointer]
+          - button "50" [ref=f4e275] [cursor=pointer]
+          - button "MAX" [ref=f4e276] [cursor=pointer]
+        - button "CANCEL refund 50" [ref=f4e277] [cursor=pointer]:
+          - text: CANCEL
+          - generic [ref=f4e278]: refund 50
+    - generic [ref=f4e90]:
+      - button "↻ REPEAT" [ref=f4e91] [cursor=pointer]
+      - button "🤖 AUTO ×10" [ref=f4e92] [cursor=pointer]
+    - generic [ref=f4e93]:
+      - generic [ref=f4e94]:
+        - generic [ref=f4e95]: Wins
+        - generic [ref=f4e96]: "5"
+      - generic [ref=f4e97]:
+        - generic [ref=f4e98]: Losses
+        - generic [ref=f4e99]: "5"
+      - generic [ref=f4e100]:
+        - generic [ref=f4e101]: Best
+        - generic [ref=f4e102]: 2.00×
+      - generic [ref=f4e103]:
+        - generic [ref=f4e104]: Streak
+        - generic [ref=f4e105]: "0"
+      - generic [ref=f4e106]:
+        - generic [ref=f4e107]: Profit
+        - generic [ref=f4e108]: "-155"
+  - generic: 🤗 Tough streak — +150 bonus coins to keep going!

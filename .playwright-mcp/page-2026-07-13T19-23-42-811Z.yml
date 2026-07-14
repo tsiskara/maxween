@@ -1,0 +1,109 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4] [cursor=pointer]: ▲ BOOST
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: 🪙
+        - generic [ref=e8]: 1,302
+        - button "+" [ref=e9] [cursor=pointer]
+      - generic "Your level & XP" [ref=e10] [cursor=pointer]:
+        - generic [ref=e11]:
+          - generic [ref=e12]: LV 1
+          - generic [ref=e13]: 30/100
+        - generic [ref=e15]: Rookie
+      - generic [ref=e16]:
+        - button "🏆 25" [ref=e17] [cursor=pointer]:
+          - text: 🏆
+          - generic [ref=e18]: "25"
+        - button "🎯" [ref=e19] [cursor=pointer]
+        - button "🎨" [ref=e20] [cursor=pointer]
+        - button "≡" [ref=e21] [cursor=pointer]
+        - button "🔊" [ref=e22] [cursor=pointer]
+  - generic [ref=e23]:
+    - generic [ref=e24]: 8.83×
+    - generic [ref=e25]: 2.38×
+    - generic [ref=e27]: 3.13×
+    - generic [ref=e28]: 1.43×
+    - generic [ref=e29]: 2.49×
+    - generic [ref=e30]: 1.01×
+    - generic [ref=e31]: 4.11×
+    - generic [ref=e32]: 5.33×
+    - generic [ref=e33]: 2.25×
+    - generic [ref=e34]: 6.28×
+    - generic [ref=e35]: 1.83×
+    - generic [ref=e36]: 1.18×
+  - main [ref=e37]:
+    - generic:
+      - generic: 🎉 BIG WIN
+      - generic: 10.00×
+      - generic: +0 🪙
+      - button "📋 COPY BRAG"
+      - button "✕"
+    - generic [ref=e39] [cursor=pointer]:
+      - generic [ref=e40]: Provably Fair
+      - generic [ref=e41]: —
+    - generic: PLACE YOUR BETS · 6.0s
+    - generic: 1.00×
+    - generic [ref=e42]:
+      - generic [ref=e43]: BOOST
+      - generic [ref=e44]: Cash out before it busts
+      - generic [ref=e45]: A multiplier climbs from 1.00×. It can bust any second. Cash out to lock your win. Wait too long → lose the bet.
+      - button "START ▶" [ref=e46] [cursor=pointer]
+      - generic [ref=e47]: Free virtual coins · no real money
+  - generic [ref=e48]:
+    - generic [ref=e49]:
+      - generic [ref=e50]:
+        - generic [ref=e51]: SLOT 1
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]: BET
+            - spinbutton "Bet amount" [ref=e55]: "10"
+          - generic [ref=e56]:
+            - generic [ref=e57]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=e58]: "2.00"
+        - generic [ref=e59]:
+          - button "½" [ref=e60] [cursor=pointer]
+          - button "2×" [ref=e61] [cursor=pointer]
+          - button "10" [ref=e62] [cursor=pointer]
+          - button "50" [ref=e63] [cursor=pointer]
+          - button "MAX" [ref=e64] [cursor=pointer]
+        - button "BET 10 auto @ 2.00×" [ref=e65] [cursor=pointer]:
+          - text: BET 10
+          - generic [ref=e66]: auto @ 2.00×
+      - generic [ref=e67]:
+        - generic [ref=e68]: SLOT 2
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - generic [ref=e71]: BET
+            - spinbutton "Bet amount" [ref=e72]: "20"
+          - generic [ref=e73]:
+            - generic [ref=e74]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=e75]: "2.00"
+        - generic [ref=e76]:
+          - button "½" [ref=e77] [cursor=pointer]
+          - button "2×" [ref=e78] [cursor=pointer]
+          - button "10" [ref=e79] [cursor=pointer]
+          - button "50" [ref=e80] [cursor=pointer]
+          - button "MAX" [ref=e81] [cursor=pointer]
+        - button "BET 20 auto @ 2.00×" [ref=e82] [cursor=pointer]:
+          - text: BET 20
+          - generic [ref=e83]: auto @ 2.00×
+    - generic [ref=e84]:
+      - button "↻ REPEAT" [ref=e85] [cursor=pointer]
+      - button "🤖 AUTO ×10" [ref=e86] [cursor=pointer]
+    - generic [ref=e87]:
+      - generic [ref=e88]:
+        - generic [ref=e89]: Wins
+        - generic [ref=e90]: "1"
+      - generic [ref=e91]:
+        - generic [ref=e92]: Losses
+        - generic [ref=e93]: "0"
+      - generic [ref=e94]:
+        - generic [ref=e95]: Best
+        - generic [ref=e96]: 1.25×
+      - generic [ref=e97]:
+        - generic [ref=e98]: Streak
+        - generic [ref=e99]: "1"
+      - generic [ref=e100]:
+        - generic [ref=e101]: Profit
+        - generic [ref=e102]: "+2"

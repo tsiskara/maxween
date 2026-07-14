@@ -1,0 +1,122 @@
+- generic [ref=f7e2]:
+  - banner [ref=f7e4]:
+    - generic [ref=f7e5] [cursor=pointer]: ▲ BOOST
+    - generic [ref=f7e6]:
+      - generic [ref=f7e7]:
+        - generic [ref=f7e8]: 🪙
+        - generic [ref=f7e9]: 1,384
+        - button "+" [ref=f7e10] [cursor=pointer]
+      - generic [ref=f7e11]:
+        - button "🏆 25" [ref=f7e12] [cursor=pointer]:
+          - text: 🏆
+          - generic [ref=f7e13]: "25"
+        - button "🎯 1" [ref=f7e14] [cursor=pointer]:
+          - text: 🎯
+          - generic [ref=f7e15]: "1"
+        - button "🎨" [ref=f7e16] [cursor=pointer]
+        - button "≡" [ref=f7e17] [cursor=pointer]
+        - button "🔊" [ref=f7e18] [cursor=pointer]
+  - generic [ref=f7e19]:
+    - generic [ref=f7e20]: 1.24×
+    - generic [ref=f7e21]: 3.24×
+    - generic [ref=f7e22]: 8.56×
+    - generic [ref=f7e23]: 1.00×
+    - generic [ref=f7e24]: 1.16×
+    - generic [ref=f7e25]: 2.67×
+    - generic [ref=f7e26]: 3.04×
+    - generic [ref=f7e27]: 2.86×
+    - generic [ref=f7e28]: 1.35×
+    - generic [ref=f7e29]: 1.00×
+    - generic [ref=f7e30]: 8.28×
+    - generic [ref=f7e32]: 2.34×
+    - generic [ref=f7e33]: 2.58×
+    - generic [ref=f7e34]: 2.58×
+    - generic [ref=f7e35]: 10.00×
+    - generic [ref=f7e36]: 2.48×
+    - generic [ref=f7e38]: 4.72×
+    - generic [ref=f7e39]: 1.06×
+    - generic [ref=f7e40]: 5.00×
+    - generic [ref=f7e41]: 9.35×
+    - generic [ref=f7e42]: 3.08×
+    - generic [ref=f7e43]: 1.00×
+    - generic [ref=f7e44]: 1.13×
+    - generic [ref=f7e45]: 5.63×
+  - main [ref=f7e46]:
+    - img "BOOST game — multiplier curve and rocket visualization" [ref=f7e47]
+    - generic:
+      - generic: 🎉 BIG WIN
+      - generic: 10.00×
+      - generic: +0 🪙
+      - button "📋 COPY BRAG"
+      - button "✕"
+    - generic [ref=f7e48]:
+      - text: 🔥
+      - generic [ref=f7e49]: 2 win streak
+    - generic [ref=f7e50] [cursor=pointer]:
+      - generic [ref=f7e51]: Provably Fair
+      - generic [ref=f7e52]: —
+    - generic: READY
+    - generic: 1.00×
+    - generic [ref=f7e53]:
+      - generic [ref=f7e54]: BOOST
+      - generic [ref=f7e55]: Cash out before it busts
+      - generic [ref=f7e56]: A multiplier climbs from 1.00×. It can bust any second. Cash out to lock your win. Wait too long → lose the bet.
+      - button "START ▶" [ref=f7e57] [cursor=pointer]
+      - generic [ref=f7e58]: Free virtual coins · no real money
+  - generic [ref=f7e59]:
+    - generic [ref=f7e60]:
+      - generic [ref=f7e61]:
+        - generic [ref=f7e62]: SLOT 1
+        - generic [ref=f7e63]:
+          - generic [ref=f7e64]:
+            - generic [ref=f7e65]: BET
+            - spinbutton "Bet amount" [ref=f7e66]: "10"
+          - generic [ref=f7e67]:
+            - generic [ref=f7e68]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=f7e69]: "2.00"
+        - generic [ref=f7e70]:
+          - button "½" [ref=f7e71] [cursor=pointer]
+          - button "2×" [ref=f7e72] [cursor=pointer]
+          - button "10" [ref=f7e73] [cursor=pointer]
+          - button "50" [ref=f7e74] [cursor=pointer]
+          - button "MAX" [ref=f7e75] [cursor=pointer]
+        - button "BET 10 auto @ 2.00×" [ref=f7e76] [cursor=pointer]:
+          - text: BET 10
+          - generic [ref=f7e77]: auto @ 2.00×
+      - generic [ref=f7e78]:
+        - generic [ref=f7e79]: SLOT 2
+        - generic [ref=f7e80]:
+          - generic [ref=f7e81]:
+            - generic [ref=f7e82]: BET
+            - spinbutton "Bet amount" [ref=f7e83]: "20"
+          - generic [ref=f7e84]:
+            - generic [ref=f7e85]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=f7e86]: "2.00"
+        - generic [ref=f7e87]:
+          - button "½" [ref=f7e88] [cursor=pointer]
+          - button "2×" [ref=f7e89] [cursor=pointer]
+          - button "10" [ref=f7e90] [cursor=pointer]
+          - button "50" [ref=f7e91] [cursor=pointer]
+          - button "MAX" [ref=f7e92] [cursor=pointer]
+        - button "BET 20 auto @ 2.00×" [ref=f7e93] [cursor=pointer]:
+          - text: BET 20
+          - generic [ref=f7e94]: auto @ 2.00×
+    - generic [ref=f7e95]:
+      - button "↻ REPEAT" [ref=f7e96] [cursor=pointer]
+      - button "🤖 AUTO ×10" [ref=f7e97] [cursor=pointer]
+    - generic [ref=f7e98]:
+      - generic [ref=f7e99]:
+        - generic [ref=f7e100]: Wins
+        - generic [ref=f7e101]: "2"
+      - generic [ref=f7e102]:
+        - generic [ref=f7e103]: Losses
+        - generic [ref=f7e104]: "0"
+      - generic [ref=f7e105]:
+        - generic [ref=f7e106]: Best
+        - generic [ref=f7e107]: 1.50×
+      - generic [ref=f7e108]:
+        - generic [ref=f7e109]: Streak
+        - generic [ref=f7e110]: "2"
+      - generic [ref=f7e111]:
+        - generic [ref=f7e112]: Profit
+        - generic [ref=f7e113]: "+34"

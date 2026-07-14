@@ -1,0 +1,12 @@
+[     707ms] [WARNING] Manifest: property 'start_url' ignored, URL is invalid. @ blob:http://localhost:8099/c85cb9e5-6930-499e-8a60-a080faafa406:0
+[     722ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8099/favicon.ico:0
+[    7043ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8099/favicon.ico:0
+[   50862ms] [WARNING] Manifest: property 'start_url' ignored, URL is invalid. @ blob:http://localhost:8099/b61faae6-10dd-4179-b13d-c509c52d246e:0
+[   56860ms] [WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:8099/boost.html:576
+[   56860ms] [WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:8099/boost.html:553
+[   56862ms] [WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:8099/boost.html:560
+[   56863ms] [ERROR] Blocked call to navigator.vibrate because user hasn't tapped on the frame or any embedded frame yet: https://www.chromestatus.com/feature/5644273861001216. @ http://localhost:8099/boost.html:592
+[   57240ms] [WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:8099/boost.html:553
+[   57599ms] [WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:8099/boost.html:553
+[   57932ms] [WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:8099/boost.html:553
+[   58068ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8099/favicon.ico:0

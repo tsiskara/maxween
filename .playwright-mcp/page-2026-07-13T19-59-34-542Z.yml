@@ -1,0 +1,102 @@
+- generic [ref=f5e2]:
+  - banner [ref=f5e3]:
+    - generic [ref=f5e4] [cursor=pointer]: ▲ BOOST
+    - generic [ref=f5e5]:
+      - generic [ref=f5e6]:
+        - generic [ref=f5e7]: 🪙
+        - generic [ref=f5e8]: 1,000
+        - button "+" [ref=f5e9] [cursor=pointer]
+      - generic [ref=f5e10]:
+        - button "🏆 28" [ref=f5e11] [cursor=pointer]:
+          - text: 🏆
+          - generic [ref=f5e12]: "28"
+        - button "🎯" [ref=f5e13] [cursor=pointer]
+        - button "🎨" [ref=f5e14] [cursor=pointer]
+        - button "≡" [ref=f5e15] [cursor=pointer]
+        - button "🔊" [ref=f5e16] [cursor=pointer]
+  - generic [ref=f5e17]:
+    - generic [ref=f5e18]: 11.59×
+    - generic [ref=f5e19]: 1.39×
+    - generic [ref=f5e20]: 1.09×
+    - generic [ref=f5e21]: 3.73×
+    - generic [ref=f5e22]: 1.56×
+    - generic [ref=f5e23]: 2.72×
+    - generic [ref=f5e24]: 1.64×
+    - generic [ref=f5e25]: 3.03×
+    - generic [ref=f5e26]: 5.36×
+    - generic [ref=f5e27]: 1.60×
+  - main [ref=f5e28]:
+    - generic:
+      - generic: 🎉 BIG WIN
+      - generic: 10.00×
+      - generic: +0 🪙
+      - button "📋 COPY BRAG"
+      - button "✕"
+    - generic [ref=f5e30] [cursor=pointer]:
+      - generic [ref=f5e31]: Provably Fair
+      - generic [ref=f5e32]: —
+    - generic: READY
+    - generic: 1.00×
+    - generic [ref=f5e33]:
+      - generic [ref=f5e34]: BOOST
+      - generic [ref=f5e35]: Cash out before it busts
+      - generic [ref=f5e36]: A multiplier climbs from 1.00×. It can bust any second. Cash out to lock your win. Wait too long → lose the bet.
+      - button "START ▶" [ref=f5e37] [cursor=pointer]
+      - generic [ref=f5e38]: Free virtual coins · no real money
+  - generic [ref=f5e39]:
+    - generic [ref=f5e40]:
+      - generic [ref=f5e41]:
+        - generic [ref=f5e42]: SLOT 1
+        - generic [ref=f5e43]:
+          - generic [ref=f5e44]:
+            - generic [ref=f5e45]: BET
+            - spinbutton "Bet amount" [ref=f5e46]: "10"
+          - generic [ref=f5e47]:
+            - generic [ref=f5e48]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=f5e49]: "2.00"
+        - generic [ref=f5e50]:
+          - button "½" [ref=f5e51] [cursor=pointer]
+          - button "2×" [ref=f5e52] [cursor=pointer]
+          - button "10" [ref=f5e53] [cursor=pointer]
+          - button "50" [ref=f5e54] [cursor=pointer]
+          - button "MAX" [ref=f5e55] [cursor=pointer]
+        - button "BET 10 auto @ 2.00×" [ref=f5e56] [cursor=pointer]:
+          - text: BET 10
+          - generic [ref=f5e57]: auto @ 2.00×
+      - generic [ref=f5e58]:
+        - generic [ref=f5e59]: SLOT 2
+        - generic [ref=f5e60]:
+          - generic [ref=f5e61]:
+            - generic [ref=f5e62]: BET
+            - spinbutton "Bet amount" [ref=f5e63]: "20"
+          - generic [ref=f5e64]:
+            - generic [ref=f5e65]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=f5e66]: "2.00"
+        - generic [ref=f5e67]:
+          - button "½" [ref=f5e68] [cursor=pointer]
+          - button "2×" [ref=f5e69] [cursor=pointer]
+          - button "10" [ref=f5e70] [cursor=pointer]
+          - button "50" [ref=f5e71] [cursor=pointer]
+          - button "MAX" [ref=f5e72] [cursor=pointer]
+        - button "BET 20 auto @ 2.00×" [ref=f5e73] [cursor=pointer]:
+          - text: BET 20
+          - generic [ref=f5e74]: auto @ 2.00×
+    - generic [ref=f5e75]:
+      - button "↻ REPEAT" [disabled] [ref=f5e76]
+      - button "🤖 AUTO ×10" [ref=f5e77] [cursor=pointer]
+    - generic [ref=f5e78]:
+      - generic [ref=f5e79]:
+        - generic [ref=f5e80]: Wins
+        - generic [ref=f5e81]: "0"
+      - generic [ref=f5e82]:
+        - generic [ref=f5e83]: Losses
+        - generic [ref=f5e84]: "0"
+      - generic [ref=f5e85]:
+        - generic [ref=f5e86]: Best
+        - generic [ref=f5e87]: —
+      - generic [ref=f5e88]:
+        - generic [ref=f5e89]: Streak
+        - generic [ref=f5e90]: "0"
+      - generic [ref=f5e91]:
+        - generic [ref=f5e92]: Profit
+        - generic [ref=f5e93]: "+0"

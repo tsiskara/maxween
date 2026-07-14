@@ -1,0 +1,146 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]: ▲ BOOST
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: 🪙
+        - generic [ref=e9]: 1,542
+        - button "+" [ref=e10] [cursor=pointer]
+      - generic [ref=e11]:
+        - button "🏆 25" [ref=e12] [cursor=pointer]:
+          - text: 🏆
+          - generic [ref=e13]: "25"
+        - button "🎯" [ref=e14] [cursor=pointer]
+        - button "🎨" [ref=e15] [cursor=pointer]
+        - button "≡" [ref=e16] [cursor=pointer]
+        - button "🔊" [ref=e17] [cursor=pointer]
+  - generic [ref=e18]:
+    - generic [ref=e357]: 7.24×
+    - generic [ref=e358]: 1.10×
+    - generic [ref=e359]: 2.56×
+    - generic [ref=e360]: 1.37×
+    - generic [ref=e361]: 1.26×
+    - generic [ref=e362]: 3.93×
+    - generic [ref=e363]: 1.00×
+    - generic [ref=e364]: 1.03×
+    - generic [ref=e365]: 2.52×
+    - generic [ref=e366]: 3.19×
+    - generic [ref=e367]: 3.05×
+    - generic [ref=e368]: 8.16×
+    - generic [ref=e369]: 3.75×
+    - generic [ref=e370]: 13.89×
+    - generic [ref=e371]: 1.34×
+    - generic [ref=e372]: 1.08×
+    - generic [ref=e373]: 1.78×
+    - generic [ref=e374]: 2.88×
+    - generic [ref=e375]: 1.90×
+    - generic [ref=e376]: 1.85×
+    - generic [ref=e378]: 1.11×
+    - generic [ref=e379]: 1.21×
+    - generic [ref=e380]: 1.08×
+    - generic [ref=e381]: 3.11×
+  - main [ref=e45]:
+    - img "BOOST game — multiplier curve and rocket visualization" [ref=e46]
+    - generic:
+      - generic:
+        - generic: gimme_grn64
+        - generic: bust
+      - generic:
+        - generic: diamond_dan77
+        - generic: bust
+      - generic:
+        - generic: scalp_seb31
+        - generic: bust
+      - generic:
+        - generic: risk_rita88
+        - generic: bust
+      - generic:
+        - generic: astrid_9958
+        - generic: bust
+      - generic:
+        - generic: betbomber26
+        - generic: bust
+      - generic:
+        - generic: astrid_9992
+        - generic: bust
+    - generic:
+      - generic: pepe_pt rare pep coin
+      - generic: luckyleo my gut says green
+    - generic:
+      - generic: 🎉 BIG WIN
+      - generic: 10.00×
+      - generic: +0 🪙
+      - button "📋 COPY BRAG"
+      - button "✕"
+    - generic [ref=e47] [cursor=pointer]:
+      - generic [ref=e48]: Provably Fair
+      - generic [ref=e49]: dd06df819107c2c1…
+    - generic: BUSTED
+    - generic:
+      - generic: FLEW AWAY
+      - generic: 7.24×
+    - generic: Flew away @ 7.24×
+    - generic: 5× — HEATING UP
+    - generic:
+      - generic: BOOST
+      - generic: Cash out before it busts
+      - generic: A multiplier climbs from 1.00×. It can bust any second. Cash out to lock your win. Wait too long → lose the bet.
+      - button "START ▶"
+      - generic: Free virtual coins · no real money
+  - generic [ref=e56]:
+    - generic [ref=e57]:
+      - generic [ref=e382]:
+        - generic [ref=e383]: SLOT 1
+        - generic [ref=e384]:
+          - generic [ref=e385]:
+            - generic [ref=e386]: BET
+            - spinbutton "Bet amount" [disabled] [ref=e387]: "10"
+          - generic [ref=e388]:
+            - generic [ref=e389]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [disabled] [ref=e390]: "2.00"
+        - generic [ref=e391]:
+          - button "½" [ref=e392] [cursor=pointer]
+          - button "2×" [ref=e393] [cursor=pointer]
+          - button "10" [ref=e394] [cursor=pointer]
+          - button "50" [ref=e395] [cursor=pointer]
+          - button "MAX" [ref=e396] [cursor=pointer]
+        - button "WAIT next round" [ref=e397]:
+          - text: WAIT
+          - generic [ref=e398]: next round
+      - generic [ref=e399]:
+        - generic [ref=e400]: SLOT 2
+        - generic [ref=e401]:
+          - generic [ref=e402]:
+            - generic [ref=e403]: BET
+            - spinbutton "Bet amount" [disabled] [ref=e404]: "20"
+          - generic [ref=e405]:
+            - generic [ref=e406]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [disabled] [ref=e407]: "2.00"
+        - generic [ref=e408]:
+          - button "½" [ref=e409] [cursor=pointer]
+          - button "2×" [ref=e410] [cursor=pointer]
+          - button "10" [ref=e411] [cursor=pointer]
+          - button "50" [ref=e412] [cursor=pointer]
+          - button "MAX" [ref=e413] [cursor=pointer]
+        - button "WAIT next round" [ref=e414]:
+          - text: WAIT
+          - generic [ref=e415]: next round
+    - generic [ref=e92]:
+      - button "↻ REPEAT" [disabled] [ref=e93]
+      - button "🤖 AUTO ×10" [ref=e94] [cursor=pointer]
+    - generic [ref=e95]:
+      - generic [ref=e96]:
+        - generic [ref=e97]: Wins
+        - generic [ref=e98]: "1"
+      - generic [ref=e99]:
+        - generic [ref=e100]: Losses
+        - generic [ref=e101]: "1"
+      - generic [ref=e102]:
+        - generic [ref=e103]: Best
+        - generic [ref=e104]: 1.20×
+      - generic [ref=e105]:
+        - generic [ref=e106]: Streak
+        - generic [ref=e107]: "0"
+      - generic [ref=e108]:
+        - generic [ref=e109]: Profit
+        - generic [ref=e110]: "-8"

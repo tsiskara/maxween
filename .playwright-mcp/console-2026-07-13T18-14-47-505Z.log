@@ -1,0 +1,6 @@
+[     109ms] [WARNING] Manifest: property 'start_url' ignored, URL is invalid. @ blob:http://localhost:8765/22e26154-9697-4ceb-96b5-908e936542f5:0
+[    6118ms] TypeError: Math.isFinite is not a function
+    at drawCurve (http://localhost:8765/boost.html:670:17)
+    at render (http://localhost:8765/boost.html:645:44)
+    at loop (http://localhost:8765/boost.html:621:17)
+[    6137ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8765/favicon.ico:0

@@ -1,0 +1,116 @@
+- generic [ref=f4e2]:
+  - banner [ref=f4e3]:
+    - generic [ref=f4e4] [cursor=pointer]: ▲ BOOST
+    - generic [ref=f4e5]:
+      - generic [ref=f4e6]:
+        - generic [ref=f4e7]: 🪙
+        - generic [ref=f4e8]: 1,746
+        - button "+" [ref=f4e9] [cursor=pointer]
+      - generic "Your level & XP" [ref=f4e10] [cursor=pointer]:
+        - generic [ref=f4e11]:
+          - generic [ref=f4e12]: LV 2
+          - generic [ref=f4e13]: 51/255
+        - generic [ref=f4e15]: Cadet
+      - generic [ref=f4e16]:
+        - button "🏆 24" [ref=f4e17] [cursor=pointer]:
+          - text: 🏆
+          - generic [ref=f4e18]: "24"
+        - button "🎯" [ref=f4e19] [cursor=pointer]
+        - button "🎁 1" [ref=f4e20] [cursor=pointer]:
+          - text: 🎁
+          - generic [ref=f4e21]: "1"
+        - button "🎨" [ref=f4e22] [cursor=pointer]
+        - button "≡" [ref=f4e23] [cursor=pointer]
+        - button "🔊" [ref=f4e24] [cursor=pointer]
+  - generic [ref=f4e25]:
+    - generic [ref=f4e26]: 5.43×
+    - generic [ref=f4e28]: 3.19×
+    - generic [ref=f4e29]: 4.18×
+    - generic [ref=f4e31]: 6.96×
+    - generic [ref=f4e32]: 1.57×
+    - generic [ref=f4e33]: 6.69×
+    - generic [ref=f4e34]: 1.44×
+    - generic [ref=f4e35]: 1.11×
+    - generic [ref=f4e36]: 4.59×
+    - generic [ref=f4e37]: 6.64×
+    - generic [ref=f4e38]: 3.46×
+    - generic [ref=f4e39]: 2.30×
+    - generic [ref=f4e40]: 3.48×
+  - main [ref=f4e41]:
+    - generic:
+      - generic: 🎉 BIG WIN
+      - generic: 10.00×
+      - generic: +0 🪙
+      - button "📋 COPY BRAG"
+      - button "✕"
+    - generic [ref=f4e43]:
+      - text: 🔥
+      - generic [ref=f4e44]: 2 win streak
+    - generic [ref=f4e45] [cursor=pointer]:
+      - generic [ref=f4e46]: Provably Fair
+      - generic [ref=f4e47]: —
+    - generic: READY
+    - generic: 1.00×
+    - generic [ref=f4e48]:
+      - generic [ref=f4e49]: BOOST
+      - generic [ref=f4e50]: Cash out before it busts
+      - generic [ref=f4e51]: A multiplier climbs from 1.00×. It can bust any second. Cash out to lock your win. Wait too long → lose the bet.
+      - button "START ▶" [ref=f4e52] [cursor=pointer]
+      - generic [ref=f4e53]: Free virtual coins · no real money
+  - generic [ref=f4e54]:
+    - generic [ref=f4e55]:
+      - generic [ref=f4e56]:
+        - generic [ref=f4e57]: SLOT 1
+        - generic [ref=f4e58]:
+          - generic [ref=f4e59]:
+            - generic [ref=f4e60]: BET
+            - spinbutton "Bet amount" [ref=f4e61]: "10"
+          - generic [ref=f4e62]:
+            - generic [ref=f4e63]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=f4e64]: "2.00"
+        - generic [ref=f4e65]:
+          - button "½" [ref=f4e66] [cursor=pointer]
+          - button "2×" [ref=f4e67] [cursor=pointer]
+          - button "10" [ref=f4e68] [cursor=pointer]
+          - button "50" [ref=f4e69] [cursor=pointer]
+          - button "MAX" [ref=f4e70] [cursor=pointer]
+        - button "BET 10 auto @ 2.00×" [ref=f4e71] [cursor=pointer]:
+          - text: BET 10
+          - generic [ref=f4e72]: auto @ 2.00×
+      - generic [ref=f4e73]:
+        - generic [ref=f4e74]: SLOT 2
+        - generic [ref=f4e75]:
+          - generic [ref=f4e76]:
+            - generic [ref=f4e77]: BET
+            - spinbutton "Bet amount" [ref=f4e78]: "20"
+          - generic [ref=f4e79]:
+            - generic [ref=f4e80]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=f4e81]: "2.00"
+        - generic [ref=f4e82]:
+          - button "½" [ref=f4e83] [cursor=pointer]
+          - button "2×" [ref=f4e84] [cursor=pointer]
+          - button "10" [ref=f4e85] [cursor=pointer]
+          - button "50" [ref=f4e86] [cursor=pointer]
+          - button "MAX" [ref=f4e87] [cursor=pointer]
+        - button "BET 20 auto @ 2.00×" [ref=f4e88] [cursor=pointer]:
+          - text: BET 20
+          - generic [ref=f4e89]: auto @ 2.00×
+    - generic [ref=f4e90]:
+      - button "↻ REPEAT" [ref=f4e91] [cursor=pointer]
+      - button "🤖 AUTO ×10" [ref=f4e92] [cursor=pointer]
+    - generic [ref=f4e93]:
+      - generic [ref=f4e94]:
+        - generic [ref=f4e95]: Wins
+        - generic [ref=f4e96]: "4"
+      - generic [ref=f4e97]:
+        - generic [ref=f4e98]: Losses
+        - generic [ref=f4e99]: "0"
+      - generic [ref=f4e100]:
+        - generic [ref=f4e101]: Best
+        - generic [ref=f4e102]: 2.00×
+      - generic [ref=f4e103]:
+        - generic [ref=f4e104]: Streak
+        - generic [ref=f4e105]: "2"
+      - generic [ref=f4e106]:
+        - generic [ref=f4e107]: Profit
+        - generic [ref=f4e108]: "+71"

@@ -1,0 +1,103 @@
+- generic [ref=f6e2]:
+  - banner [ref=f6e4]:
+    - generic [ref=f6e5] [cursor=pointer]: ▲ BOOST
+    - generic [ref=f6e6]:
+      - generic [ref=f6e7]:
+        - generic [ref=f6e8]: 🪙
+        - generic [ref=f6e9]: 1,000
+        - button "+" [ref=f6e10] [cursor=pointer]
+      - generic [ref=f6e11]:
+        - button "🏆 28" [ref=f6e12] [cursor=pointer]:
+          - text: 🏆
+          - generic [ref=f6e13]: "28"
+        - button "🎯" [ref=f6e14] [cursor=pointer]
+        - button "🎨" [ref=f6e15] [cursor=pointer]
+        - button "≡" [ref=f6e16] [cursor=pointer]
+        - button "🔊" [ref=f6e17] [cursor=pointer]
+  - generic [ref=f6e18]:
+    - generic [ref=f6e19]: 3.08×
+    - generic [ref=f6e20]: 1.00×
+    - generic [ref=f6e21]: 1.13×
+    - generic [ref=f6e22]: 5.63×
+    - generic [ref=f6e23]: 6.42×
+    - generic [ref=f6e24]: 1.95×
+    - generic [ref=f6e25]: 3.81×
+    - generic [ref=f6e26]: 1.00×
+    - generic [ref=f6e27]: 2.92×
+    - generic [ref=f6e28]: 1.04×
+  - main [ref=f6e29]:
+    - img "BOOST game — multiplier curve and rocket visualization" [ref=f6e30]
+    - generic:
+      - generic: 🎉 BIG WIN
+      - generic: 10.00×
+      - generic: +0 🪙
+      - button "📋 COPY BRAG"
+      - button "✕"
+    - generic [ref=f6e31] [cursor=pointer]:
+      - generic [ref=f6e32]: Provably Fair
+      - generic [ref=f6e33]: —
+    - generic: READY
+    - generic: 1.00×
+    - generic [ref=f6e34]:
+      - generic [ref=f6e35]: BOOST
+      - generic [ref=f6e36]: Cash out before it busts
+      - generic [ref=f6e37]: A multiplier climbs from 1.00×. It can bust any second. Cash out to lock your win. Wait too long → lose the bet.
+      - button "START ▶" [ref=f6e38] [cursor=pointer]
+      - generic [ref=f6e39]: Free virtual coins · no real money
+  - generic [ref=f6e40]:
+    - generic [ref=f6e41]:
+      - generic [ref=f6e42]:
+        - generic [ref=f6e43]: SLOT 1
+        - generic [ref=f6e44]:
+          - generic [ref=f6e45]:
+            - generic [ref=f6e46]: BET
+            - spinbutton "Bet amount" [ref=f6e47]: "10"
+          - generic [ref=f6e48]:
+            - generic [ref=f6e49]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=f6e50]: "2.00"
+        - generic [ref=f6e51]:
+          - button "½" [ref=f6e52] [cursor=pointer]
+          - button "2×" [ref=f6e53] [cursor=pointer]
+          - button "10" [ref=f6e54] [cursor=pointer]
+          - button "50" [ref=f6e55] [cursor=pointer]
+          - button "MAX" [ref=f6e56] [cursor=pointer]
+        - button "BET 10 auto @ 2.00×" [ref=f6e57] [cursor=pointer]:
+          - text: BET 10
+          - generic [ref=f6e58]: auto @ 2.00×
+      - generic [ref=f6e59]:
+        - generic [ref=f6e60]: SLOT 2
+        - generic [ref=f6e61]:
+          - generic [ref=f6e62]:
+            - generic [ref=f6e63]: BET
+            - spinbutton "Bet amount" [ref=f6e64]: "20"
+          - generic [ref=f6e65]:
+            - generic [ref=f6e66]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [ref=f6e67]: "2.00"
+        - generic [ref=f6e68]:
+          - button "½" [ref=f6e69] [cursor=pointer]
+          - button "2×" [ref=f6e70] [cursor=pointer]
+          - button "10" [ref=f6e71] [cursor=pointer]
+          - button "50" [ref=f6e72] [cursor=pointer]
+          - button "MAX" [ref=f6e73] [cursor=pointer]
+        - button "BET 20 auto @ 2.00×" [ref=f6e74] [cursor=pointer]:
+          - text: BET 20
+          - generic [ref=f6e75]: auto @ 2.00×
+    - generic [ref=f6e76]:
+      - button "↻ REPEAT" [disabled] [ref=f6e77]
+      - button "🤖 AUTO ×10" [ref=f6e78] [cursor=pointer]
+    - generic [ref=f6e79]:
+      - generic [ref=f6e80]:
+        - generic [ref=f6e81]: Wins
+        - generic [ref=f6e82]: "0"
+      - generic [ref=f6e83]:
+        - generic [ref=f6e84]: Losses
+        - generic [ref=f6e85]: "0"
+      - generic [ref=f6e86]:
+        - generic [ref=f6e87]: Best
+        - generic [ref=f6e88]: —
+      - generic [ref=f6e89]:
+        - generic [ref=f6e90]: Streak
+        - generic [ref=f6e91]: "0"
+      - generic [ref=f6e92]:
+        - generic [ref=f6e93]: Profit
+        - generic [ref=f6e94]: "+0"

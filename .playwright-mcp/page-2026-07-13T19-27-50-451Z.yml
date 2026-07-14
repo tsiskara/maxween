@@ -1,0 +1,149 @@
+- generic [ref=f4e2]:
+  - banner [ref=f4e3]:
+    - generic [ref=f4e4] [cursor=pointer]: ▲ BOOST
+    - generic [ref=f4e5]:
+      - generic [ref=f4e6]:
+        - generic [ref=f4e7]: 🪙
+        - generic [ref=f4e8]: 2,676
+        - button "+" [ref=f4e9] [cursor=pointer]
+      - generic "Your level & XP" [ref=f4e10] [cursor=pointer]:
+        - generic [ref=f4e11]:
+          - generic [ref=f4e12]: LV 3
+          - generic [ref=f4e13]: 19/441
+        - generic [ref=f4e15]: Pilot
+      - generic [ref=f4e16]:
+        - button "🏆 23" [ref=f4e110] [cursor=pointer]:
+          - text: 🏆
+          - generic [ref=f4e18]: "23"
+        - button "🎯 1" [ref=f4e111] [cursor=pointer]:
+          - text: 🎯
+          - generic [ref=f4e112]: "1"
+        - button "🎨" [ref=f4e22] [cursor=pointer]
+        - button "≡" [ref=f4e23] [cursor=pointer]
+        - button "🔊" [ref=f4e24] [cursor=pointer]
+  - generic [ref=f4e25]:
+    - generic [ref=f4e279]: 2.97×
+    - generic [ref=f4e281]: 1.14×
+    - generic [ref=f4e283]: 1.00×
+    - generic [ref=f4e285]: 1.60×
+    - generic [ref=f4e287]: 5.43×
+    - generic [ref=f4e289]: 3.19×
+    - generic [ref=f4e290]: 4.18×
+    - generic [ref=f4e292]: 6.96×
+    - generic [ref=f4e293]: 1.57×
+    - generic [ref=f4e294]: 6.69×
+    - generic [ref=f4e295]: 1.44×
+    - generic [ref=f4e296]: 1.11×
+    - generic [ref=f4e297]: 4.59×
+    - generic [ref=f4e298]: 6.64×
+    - generic [ref=f4e299]: 3.46×
+    - generic [ref=f4e300]: 2.30×
+    - generic [ref=f4e301]: 3.48×
+  - main [ref=f4e41]:
+    - generic:
+      - generic:
+        - generic: scalp_seb19 +1.0k
+        - generic: cashed @ 2.81×
+      - generic:
+        - generic: risk_rita67 -140
+        - generic: busted
+      - generic:
+        - generic: diamond_dan77 -60
+        - generic: busted
+      - generic:
+        - generic: sally_skins86 +11
+        - generic: cashed @ 1.85×
+      - generic:
+        - generic: cryptocat59 +395
+        - generic: cashed @ 1.98×
+      - generic:
+        - generic: mr_multi55 +700
+        - generic: cashed @ 1.76×
+    - generic: rocketrick gl on this one 🚀
+    - generic:
+      - generic: 🎉 BIG WIN
+      - generic: 10.00×
+      - generic: +0 🪙
+      - button "📋 COPY BRAG"
+      - button "✕"
+    - generic [ref=f4e45] [cursor=pointer]:
+      - generic [ref=f4e46]: Provably Fair
+      - generic [ref=f4e47]: ac6473b16dd72ec4…
+    - generic: BUSTED
+    - generic:
+      - generic: FLEW AWAY
+      - generic: 2.97×
+    - generic: Round bust @ 2.97×
+    - generic: 2× — LIFTOFF
+    - generic: DOUBLE CASH!
+    - generic: 2x COMBO!
+    - generic [ref=f4e303]:
+      - generic [ref=f4e304]: "3"
+      - generic [ref=f4e306]: LEVEL UP
+      - generic [ref=f4e307]: Pilot
+      - generic [ref=f4e308]: +450 🪙 + 🎁 Lucky Box
+      - generic [ref=f4e309]: tap to continue
+    - generic:
+      - generic: BOOST
+      - generic: Cash out before it busts
+      - generic: A multiplier climbs from 1.00×. It can bust any second. Cash out to lock your win. Wait too long → lose the bet.
+      - button "START ▶"
+      - generic: Free virtual coins · no real money
+  - generic [ref=f4e54]:
+    - generic [ref=f4e55]:
+      - generic [ref=f4e310]:
+        - generic [ref=f4e311]: SLOT 1+100 🪙
+        - generic [ref=f4e312]:
+          - generic [ref=f4e313]:
+            - generic [ref=f4e314]: BET
+            - spinbutton "Bet amount" [disabled] [ref=f4e315]: "50"
+          - generic [ref=f4e316]:
+            - generic [ref=f4e317]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [disabled] [ref=f4e318]: "2.00"
+        - generic [ref=f4e319]:
+          - button "½" [ref=f4e320] [cursor=pointer]
+          - button "2×" [ref=f4e321] [cursor=pointer]
+          - button "10" [ref=f4e322] [cursor=pointer]
+          - button "50" [ref=f4e323] [cursor=pointer]
+          - button "MAX" [ref=f4e324] [cursor=pointer]
+        - button "2.00× +100 🪙" [ref=f4e325]:
+          - text: 2.00×
+          - generic [ref=f4e326]: +100 🪙
+      - generic [ref=f4e327]:
+        - generic [ref=f4e328]: SLOT 2+100 🪙
+        - generic [ref=f4e329]:
+          - generic [ref=f4e330]:
+            - generic [ref=f4e331]: BET
+            - spinbutton "Bet amount" [disabled] [ref=f4e332]: "50"
+          - generic [ref=f4e333]:
+            - generic [ref=f4e334]: AUTO@
+            - spinbutton "Auto cash-out multiplier" [disabled] [ref=f4e335]: "2.00"
+        - generic [ref=f4e336]:
+          - button "½" [ref=f4e337] [cursor=pointer]
+          - button "2×" [ref=f4e338] [cursor=pointer]
+          - button "10" [ref=f4e339] [cursor=pointer]
+          - button "50" [ref=f4e340] [cursor=pointer]
+          - button "MAX" [ref=f4e341] [cursor=pointer]
+        - button "2.00× +100 🪙" [ref=f4e342]:
+          - text: 2.00×
+          - generic [ref=f4e343]: +100 🪙
+    - generic [ref=f4e90]:
+      - button "↻ REPEAT" [disabled] [ref=f4e91]
+      - button "🤖 AUTO ×10" [ref=f4e92] [cursor=pointer]
+    - generic [ref=f4e93]:
+      - generic [ref=f4e94]:
+        - generic [ref=f4e95]: Wins
+        - generic [ref=f4e96]: "7"
+      - generic [ref=f4e97]:
+        - generic [ref=f4e98]: Losses
+        - generic [ref=f4e99]: "5"
+      - generic [ref=f4e100]:
+        - generic [ref=f4e101]: Best
+        - generic [ref=f4e102]: 2.00×
+      - generic [ref=f4e103]:
+        - generic [ref=f4e104]: Streak
+        - generic [ref=f4e105]: "1"
+      - generic [ref=f4e106]:
+        - generic [ref=f4e107]: Profit
+        - generic [ref=f4e108]: "-55"
+  - generic: 🤗 Tough streak — +150 bonus coins to keep going!

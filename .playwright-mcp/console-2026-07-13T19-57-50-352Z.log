@@ -1,0 +1,40 @@
+[    8804ms] TypeError: Cannot read properties of undefined (reading 'toLocaleString')
+    at fmtShort (http://localhost:8765/boost.html:1538:75)
+    at http://localhost:8765/boost.html:1563:62
+    at Array.map (<anonymous>)
+    at renderBotsTable (http://localhost:8765/boost.html:1559:25)
+    at onBetBtn (http://localhost:8765/boost.html:1201:39)
+    at card.querySelector.onclick (http://localhost:8765/boost.html:1190:45)
+    at eval (eval at <anonymous> (eval at evaluate (:303:30)), <anonymous>:18:36)
+    at async eval (eval at evaluate (:303:30), <anonymous>:4:30)
+    at async <anonymous>:329:30
+[   20306ms] TypeError: Cannot read properties of undefined (reading 'toLocaleString')
+    at fmtShort (http://localhost:8765/boost.html:1538:75)
+    at http://localhost:8765/boost.html:1563:62
+    at Array.map (<anonymous>)
+    at renderBotsTable (http://localhost:8765/boost.html:1559:25)
+    at onBetBtn (http://localhost:8765/boost.html:1201:39)
+    at card.querySelector.onclick (http://localhost:8765/boost.html:1190:45)
+    at eval (eval at <anonymous> (eval at evaluate (:303:30)), <anonymous>:18:36)
+    at async eval (eval at evaluate (:303:30), <anonymous>:4:30)
+    at async <anonymous>:329:30
+[   33256ms] TypeError: Cannot read properties of undefined (reading 'toLocaleString')
+    at fmtShort (http://localhost:8765/boost.html:1538:75)
+    at http://localhost:8765/boost.html:1563:62
+    at Array.map (<anonymous>)
+    at renderBotsTable (http://localhost:8765/boost.html:1559:25)
+    at onBetBtn (http://localhost:8765/boost.html:1201:39)
+    at card.querySelector.onclick (http://localhost:8765/boost.html:1190:45)
+    at eval (eval at <anonymous> (eval at evaluate (:303:30)), <anonymous>:18:36)
+    at async eval (eval at evaluate (:303:30), <anonymous>:4:30)
+    at async <anonymous>:329:30
+[   46246ms] TypeError: Cannot read properties of undefined (reading 'toLocaleString')
+    at fmtShort (http://localhost:8765/boost.html:1538:75)
+    at http://localhost:8765/boost.html:1563:62
+    at Array.map (<anonymous>)
+    at renderBotsTable (http://localhost:8765/boost.html:1559:25)
+    at onBetBtn (http://localhost:8765/boost.html:1201:39)
+    at card.querySelector.onclick (http://localhost:8765/boost.html:1190:45)
+    at eval (eval at <anonymous> (eval at evaluate (:303:30)), <anonymous>:12:34)
+    at async eval (eval at evaluate (:303:30), <anonymous>:4:30)
+    at async <anonymous>:329:30

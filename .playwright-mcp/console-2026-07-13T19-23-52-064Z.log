@@ -1,0 +1,2 @@
+[      43ms] [WARNING] Manifest: property 'start_url' ignored, URL is invalid. @ blob:http://localhost:8099/ce88e2b0-e014-4863-8e85-ecd538481710:0
+[    6094ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8099/favicon.ico:0
