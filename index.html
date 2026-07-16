@@ -852,17 +852,20 @@ SAVE=load();
    ============================================================ */
 const TG = (function(){
   const wa = (typeof window!=='undefined' && window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
-  const ready = !!wa;
+  // "launched" = actually opened inside Telegram (has initData), not just the SDK present on a web page.
+  // This prevents the SDK from spamming "not supported" warnings on the regular website.
+  const launched = !!(wa && wa.initData);
+  const ready = launched; // features only activate when genuinely inside Telegram
   const hp = ready && wa.HapticFeedback ? wa.HapticFeedback : null;
   const cs = ready && wa.CloudStorage ? wa.CloudStorage : null;
 
   function init(){
-    if(!wa) return;
+    if(!launched) return; // only run Telegram-specific setup when actually inside Telegram
     try{
       wa.ready();
       wa.expand();
-      if(wa.enableClosingConfirmation) wa.enableClosingConfirmation();
-      if(wa.disableVerticalSwipes) wa.disableVerticalSwipes();
+      if(wa.enableClosingConfirmation) try{ wa.enableClosingConfirmation(); }catch(e){}
+      if(wa.disableVerticalSwipes) try{ wa.disableVerticalSwipes(); }catch(e){}
       wa.onEvent('viewportChanged', () => { if(typeof resize==='function') resize(); });
     }catch(e){}
     applyTheme();

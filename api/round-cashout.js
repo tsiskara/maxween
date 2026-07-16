@@ -1,26 +1,33 @@
 /*
  * POST /api/round-cashout
  *
- * Body: { token: string, claimedMult?: number }
+ * Body: { token: string, amount?: number }
  *
  * Validates a cashout against the server-authoritative multiplier.
  * The server ignores the client's claimedMult for the authoritative
  * decision and instead derives the real mult from its own clock.
  *
- * Returns:
- *   { ok: true, valid: true,  mult: <number>, win: <amount*mult> }
- *   { ok: true, valid: false, reason: 'busted', crashAt: <number>, ... }
+ * v7 hardening:
+ *   - Post-bust grace REMOVED. A round is busted the instant
+ *     serverMult >= crashAt. (Previously a 350ms window allowed a
+ *     guaranteed-win strategy: poll until bust, then cash at crashAt.)
+ *   - Per-token cashout cap (MAX_CASHOUTS_PER_TOKEN = 2, one per slot).
+ *     Stops the trivial N-cashout replay within an instance. Residual:
+ *     cross-instance replay after Map reset needs KV — filed as follow-up.
+ *   - Client `amount` is used only for the payout figure (stake is not yet
+ *     bound server-side — see round-start). Validity is decided purely from
+ *     the server clock + crashAt.
  *
- * Latency grace: a cashout that arrives CASH_GRACE_MS after the real
- * bust is still honoured — the client may have tapped a hair before
- * the network round-trip completed. Generous to the player, but a
- * client can NEVER cash out ABOVE the real crashAt.
+ * Returns:
+ *   { ok: true, valid: true,  mult, win }
+ *   { ok: true, valid: false, reason: 'busted'|'spent', ... }
  */
 
 // Edge Runtime: full Web API (Request/Response/crypto.subtle).
 export const config = { runtime: "edge" };
 import {
   decryptToken, multAt, sha256Hex, json, rateGate, clientIp, hasSecret, ctEqual, CFG, readJsonBody,
+  cashCountFor, markCashout,
 } from '../lib/server-engine.js';
 
 export default async function handler(req) {
@@ -45,32 +52,18 @@ export default async function handler(req) {
   const expectMac = await sha256Hex([p.seed, p.crashAt, p.started, p.nonce, p.clientSeed].join('|'));
   if (!ctEqual(expectMac, p.mac)) return json({ ok: false, error: 'bad-token' }, 400);
 
+  // v7: anti-replay — at most MAX_CASHOUTS_PER_TOKEN honored cashouts per round.
+  if (cashCountFor(token, p.mac) >= CFG.MAX_CASHOUTS_PER_TOKEN) {
+    return json({ ok: true, valid: false, reason: 'spent', serverTime: Date.now() });
+  }
+
   // Authoritative server-clock multiplier at the moment of cashout.
   const now = Date.now();
   const elapsed = Math.max(0, now - p.started);
   const serverMult = multAt(elapsed);
 
-  // Did it already bust?
+  // v7: no grace. Busted the instant the multiplier reaches crashAt.
   if (serverMult >= p.crashAt) {
-    // Grace: if the bust happened within the last CASH_GRACE_MS, the player
-    // very likely tapped just before the network delivered the bust tick.
-    const bustElapsedApprox = elapsed; // upper bound
-    // Re-check: was the crashAt reachable within (elapsed - grace)?
-    const elapsedMinusGrace = Math.max(0, elapsed - CFG.CASH_GRACE_MS);
-    const multAtGrace = multAt(elapsedMinusGrace);
-    if (multAtGrace < p.crashAt) {
-      // The player was within the grace window → honour at crashAt (the best
-      // legal multiplier). They cannot exceed crashAt, only cap at it.
-      const honoured = Math.min(serverMult, p.crashAt);
-      return json({
-        ok: true, valid: true, grace: true,
-        mult: honoured,
-        win: Math.round(amount * honoured),
-        crashAt: p.crashAt,
-        serverTime: now,
-      });
-    }
-    // Legitimately too late.
     return json({
       ok: true, valid: false, reason: 'busted',
       crashAt: p.crashAt,
@@ -81,12 +74,14 @@ export default async function handler(req) {
     });
   }
 
-  // Valid cashout at the authoritative multiplier.
+  // Valid cashout at the authoritative multiplier. Count it against the cap.
+  markCashout(token, p.mac);
+  const honored = Math.floor(serverMult * 100) / 100;
   return json({
     ok: true,
     valid: true,
-    mult: Math.floor(serverMult * 100) / 100,
-    win: Math.round(amount * Math.floor(serverMult * 100) / 100),
+    mult: honored,
+    win: Math.round(amount * honored),
     serverTime: now,
   });
 }
