@@ -457,6 +457,16 @@ canvas:focus-visible{outline-offset:-4px}
 #panel{padding-bottom:calc(11px + env(safe-area-inset-bottom,0px))}
 /* aria-live polite region for screen readers */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* ponytail: skip link — visible only when focused. Keyboard users land on the
+   game immediately instead of tabbing through the whole nav chrome. */
+.skip-link{position:fixed;top:8px;left:8px;z-index:var(--z-max);background:var(--gold);color:#1a0e00;padding:8px 14px;border-radius:8px;font-weight:800;font-size:13px;text-decoration:none;transform:translateY(-150%);transition:transform .15s var(--ease-out)}
+.skip-link:focus{transform:translateY(0)}
+/* role=switch gets a visible focus ring like other controls */
+.toggle:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+/* fullscreen: the page already fills the viewport; in true FS we just let the
+   background gradient cover the whole screen with no letterboxing. */
+body.is-fs #app{width:100vw;height:100vh}
+:fullscreen #app,:-webkit-full-screen #app{width:100vw;height:100vh}
 /* Real-money wallet modal */
 .rm-auth,.rm-wallet{display:flex;flex-direction:column;gap:12px;padding:6px 2px}
 .rm-auth label,.rm-wallet label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted,#9aa)}
@@ -477,16 +487,18 @@ canvas:focus-visible{outline-offset:-4px}
 <body>
 <div id="app">
   <div class="sr-only" aria-live="polite" id="srAnnouncer"></div>
+  <!-- ponytail: skip link is the #1 a11y win for keyboard users on a busy app shell -->
+  <a href="#gameMain" class="skip-link">Skip to game</a>
   <header>
-    <div class="logo" id="logoBtn">▲ BOOST</div>
+    <div class="logo" id="logoBtn" role="button" tabindex="0" aria-label="BOOST — back to start screen">▲ BOOST</div>
     <div class="header-right">
-      <div class="bal"><span class="ic">🪙</span><span class="v" id="balance">1,000</span><button class="add" id="freeBtn" title="Free coins">+</button></div>
-      <div class="lvlbar" id="lvlBar" title="Your level & XP"><div class="lt"><span class="lv">LV 1</span><span class="xp">0/100</span></div><div class="track"><div class="fill" id="lvlFill"></div></div><div class="title-chip" id="titleChip">Rookie</div></div><div class="navbtns">
-        <button class="icbtn" id="achBtn" title="Achievements">🏆<span class="badge g" id="achBadge" style="display:none">0</span></button>
-        <button class="icbtn" id="misBtn" title="Missions">🎯<span class="badge" id="misBadge" style="display:none">0</span></button>
-        <button class="icbtn" id="lbxBtn" title="Lucky Boxes" style="display:none">🎁<span class="badge g" style="display:none">0</span></button>
-        <button class="icbtn" id="shopBtn" title="Shop">🎨</button>
-        <button class="icbtn" id="moreBtn" title="More">≡</button>
+      <div class="bal"><span class="ic" aria-hidden="true">🪙</span><span class="v" id="balance" aria-label="Balance">1,000</span><button class="add" id="freeBtn" aria-label="Claim free coins">+</button></div>
+      <div class="lvlbar" id="lvlBar" role="img" aria-label="Level 1, 0 of 100 XP, Rookie"><div class="lt"><span class="lv">LV 1</span><span class="xp">0/100</span></div><div class="track"><div class="fill" id="lvlFill"></div></div><div class="title-chip" id="titleChip">Rookie</div></div><div class="navbtns">
+        <button class="icbtn" id="achBtn" aria-label="Achievements">🏆<span class="badge g" id="achBadge" style="display:none" aria-hidden="true">0</span></button>
+        <button class="icbtn" id="misBtn" aria-label="Missions">🎯<span class="badge" id="misBadge" style="display:none" aria-hidden="true">0</span></button>
+        <button class="icbtn" id="lbxBtn" aria-label="Lucky Boxes" style="display:none">🎁<span class="badge g" style="display:none" aria-hidden="true">0</span></button>
+        <button class="icbtn" id="shopBtn" aria-label="Shop">🎨</button>
+        <button class="icbtn" id="moreBtn" aria-label="More menu">≡</button>
       </div>
     </div>
   </header>
@@ -540,10 +552,10 @@ canvas:focus-visible{outline-offset:-4px}
     </div>
   </div>
 
-  <div id="toast"></div>
-  <div id="achToast"><div class="ic" id="achToastIc">🏆</div><div class="tx"><div class="top">Achievement Unlocked</div><div class="nm" id="achToastNm">—</div><div class="rwd" id="achToastRwd">+0 🪙</div></div></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="achToast" role="status" aria-live="polite"><div class="ic" id="achToastIc" aria-hidden="true">🏆</div><div class="tx"><div class="top">Achievement Unlocked</div><div class="nm" id="achToastNm">—</div><div class="rwd" id="achToastRwd">+0 🪙</div></div></div>
 
-  <div class="modal" id="modal"><div class="sheet"><div class="sheet-head"><div class="ti" id="sheetTitle">—</div><button class="sheet-close" id="sheetClose">✕</button></div><div class="sheet-body" id="sheetBody"></div></div></div>
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><div class="sheet"><div class="sheet-head"><div class="ti" id="sheetTitle">—</div><button class="sheet-close" id="sheetClose" aria-label="Close dialog">✕</button></div><div class="sheet-body" id="sheetBody"></div></div></div>
 
   <div id="chestModal"><div id="chestWrap"><div style="font-size:20px;font-weight:900;letter-spacing:2px;color:var(--gold)">🎁 DAILY CHEST</div><div id="chestGrid"><div class="chest" data-i="0">🎁</div><div class="chest" data-i="1">🎁</div><div class="chest" data-i="2">🎁</div></div><div id="chestResult">Pick a chest!</div><button class="sharebtn cls" id="chestClose" style="margin-top:14px">Close</button></div></div>
 </div>
@@ -1363,7 +1375,10 @@ const PH=Object.freeze({BET:'bet',FLY:'fly',CRASH:'crash'}); // immutable
 // so canvas font strings became "700 9px undefined" and were silently ignored.
 // Resolve the real family stack once from computed style.
 const BODY_FONT=getComputedStyle(document.body).fontFamily||'sans-serif';
-	function makeBetSlot(i){ return {idx:i, amount:i===0?10:20, autoAt:2.0, placed:false, cashedOut:false, cashMult:0, winAmt:0, autoRounds:0}; }
+	// ponytail: 100/100 + 10/10 — default auto-cashout is 10× so slot 0 (bet 10)
+	// targets exactly 100, slot 1 (bet 20) targets 200. 10× is the iconic
+	// crash-game moonshot (≈1-in-9 at our house edge) — aspirational, not safe.
+	function makeBetSlot(i){ return {idx:i, amount:i===0?10:20, autoAt:10.0, placed:false, cashedOut:false, cashMult:0, winAmt:0, autoRounds:0}; }
 	let _gBalance=Math.min(SAVE.balance,999999999);
 		const G={
 		  phase:PH.BET, mult:1, crashAt:2, elapsed:0, phaseT:0,
@@ -2333,7 +2348,7 @@ function buildBetCard(b){
   const amtIn=card.querySelector('.amt'), autIn=card.querySelector('.aut');
   if(G.phase===PH.BET && !b.placed){
     amtIn.addEventListener('input',()=>{ b.amount=Math.max(CFG.MIN_BET,Math.floor(Number(amtIn.value)||CFG.MIN_BET)); missionEvent('betSize',b.amount); });
-    autIn.addEventListener('input',()=>{ b.autoAt=Math.max(1.01,Number(autIn.value)||2); });
+    autIn.addEventListener('input',()=>{ b.autoAt=Math.max(1.01,Number(autIn.value)||10); });
     card.querySelectorAll('.quick-mini button').forEach(qb=>{ qb.onclick=()=>{ A.tick();
       if(qb.dataset.mul) b.amount=Math.max(CFG.MIN_BET,Math.round(b.amount*Number(qb.dataset.mul)));
       else if(qb.dataset.set==='max') b.amount=Math.max(CFG.MIN_BET,Math.floor(G.balance));
@@ -2412,8 +2427,35 @@ function updateMisBadge(){ const n=(SAVE.missions.list||[]).filter(m=>m.done&&!S
 /* ---------- Modals ---------- */
 const modal=document.getElementById('modal'),sheetTitle=document.getElementById('sheetTitle'),sheetBody=document.getElementById('sheetBody');
 document.getElementById('sheetClose').onclick=closeModal;
-function closeModal(){ modal.classList.remove('show'); }
+// ponytail: minimal focus trap — remember opener, focus close btn on open,
+// restore on close. Tab cycles inside the sheet while it's open.
+let _modalOpener=null, _lastFocusInModal=null;
+function _sheetFocusables(){
+  return Array.from(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+    .filter(el=>!el.disabled && el.offsetParent!==null);
+}
+function openModal(){
+  _modalOpener=document.activeElement;
+  modal.classList.add('show');
+  // focus the close button so screen readers announce the dialog title
+  requestAnimationFrame(()=>{ const f=document.getElementById('sheetClose'); if(f)f.focus(); });
+}
+function closeModal(){
+  modal.classList.remove('show');
+  if(_modalOpener && _modalOpener.focus){ try{_modalOpener.focus();}catch(e){} }
+  _modalOpener=null;
+}
 modal.addEventListener('click',e=>{ if(e.target===modal)closeModal(); });
+// Escape to close + Tab wraparound while modal is open
+modal.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ e.preventDefault(); closeModal(); return; }
+  if(e.key==='Tab'){
+    const fs=_sheetFocusables(); if(!fs.length)return;
+    const first=fs[0], last=fs[fs.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+});
 document.getElementById('achBtn').onclick=openAchievements;
 document.getElementById('misBtn').onclick=openMissions;
 document.getElementById('shopBtn').onclick=openShop;
@@ -2426,7 +2468,7 @@ function openAchievements(){
   html+='<div style="text-align:center; color:var(--dim); font-size:12px; margin-bottom:12px">'+done+' / '+ACHIEVEMENTS.length+' unlocked</div>';
   if(next) html+='<div style="background:linear-gradient(135deg,rgba(255,199,64,.15),rgba(255,107,61,.1));border:1px solid rgba(255,199,64,.4);border-radius:13px;padding:12px;margin-bottom:12px;display:flex;align-items:center;gap:11px"><div style="font-size:24px">'+next.ic+'</div><div><div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px">NEXT UP</div><div style="font-weight:800;font-size:13px">'+next.nm+'</div><div style="font-size:11px;color:var(--dim)">'+next.hint+'</div></div></div>';
   for(const a of ACHIEVEMENTS){ const got=!!SAVE.achievements[a.id]; html+='<div class="ach '+(got?'done':'')+'"><div class="ic">'+a.ic+'</div><div class="info"><div class="nm">'+a.nm+'</div><div class="ds">'+a.ds+'</div><div class="rwd">'+(got?'✓ Unlocked':'+'+a.rwd+' 🪙')+'</div></div></div>'; }
-  sheetBody.innerHTML=html; modal.classList.add('show');
+  sheetBody.innerHTML=html; modal.classList.add('show'); openModal();
 }
 function nextAchievementHint(){
   for(const a of ACHIEVEMENTS){ if(SAVE.achievements[a.id]) continue; const h=achProgress(a); if(h) return {ic:a.ic,nm:a.nm,hint:h}; }
@@ -2455,7 +2497,7 @@ function openMissions(){
   let html='';
   for(const m of SAVE.missions.list){ const claimed=SAVE.missions.claimed[m.id]; const pct=Math.round((m.prog/m.goal)*100);
     html+='<div class="mis '+(m.done&&!claimed?'':(claimed?'done':''))+'"><div class="top"><span class="nm">'+m.nm+'</span><span class="rwd">+'+m.rwd+' 🪙</span></div><div class="bar"><div class="fill" style="width:'+(m.done?100:pct)+'%"></div></div><div class="prog">'+m.prog+' / '+m.goal+(claimed?'  ✓ CLAIMED':'')+'</div>'+(m.done&&!claimed?'<button class="btn" style="width:100%;margin-top:8px;padding:10px;font-size:13px" data-claim="'+m.id+'">CLAIM</button>':'')+'</div>'; }
-  sheetBody.innerHTML=html; modal.classList.add('show'); updateMisBadge();
+  sheetBody.innerHTML=html; modal.classList.add('show'); openModal(); updateMisBadge();
   sheetBody.querySelectorAll('[data-claim]').forEach(b=>b.onclick=()=>claimMission(b.dataset.claim));
 }
 function openShop(){
@@ -2463,7 +2505,7 @@ function openShop(){
   let html='<div style="text-align:center;color:var(--dim);font-size:12px;margin-bottom:12px">Equipped skin changes your rocket & flame</div>';
   for(const s of SKINS){ const owned=SAVE.ownedSkins.includes(s.id); const eq=SAVE.equippedSkin===s.id;
     html+='<div class="skin '+(owned?'owned':'')+(eq?' equipped':'')+'"><div class="prev">'+s.ic+'</div><div class="info"><div class="nm">'+s.nm+'</div><div class="ds">'+s.ds+'</div></div>'+(eq?'<button class="act eq" disabled>EQUIPPED</button>':owned?'<button class="act owned" data-eq="'+s.id+'">EQUIP</button>':'<button class="act" data-buy="'+s.id+'" '+(G.balance<s.cost?'disabled':'')+'>'+s.cost+' 🪙</button>')+'</div>'; }
-  sheetBody.innerHTML=html; modal.classList.add('show');
+  sheetBody.innerHTML=html; modal.classList.add('show'); openModal();
   sheetBody.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>buySkin(b.dataset.buy));
   sheetBody.querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>equipSkin(b.dataset.eq));
 }
@@ -2480,7 +2522,7 @@ function openMore(){
       '<button class="btn alt" style="padding:14px;font-size:13px;background:linear-gradient(180deg,#3a2530,#2a1820);color:#ff8b9a;border:1px solid rgba(255,59,92,.3)" data-open="rp">🛡️ Responsible Play</button>'+
     '</div>'+
     '<button class="btn alt" style="width:100%;padding:13px;font-size:13px;background:linear-gradient(180deg,#ff3b5c,#a02038);color:#fff" data-reset="1">Reset All Progress</button>';
-  modal.classList.add('show');
+  modal.classList.add('show'); openModal();
   sheetBody.querySelector('[data-open="lb"]').onclick=openLeaderboard;
   sheetBody.querySelector('[data-open="set"]').onclick=openSettings;
   sheetBody.querySelector('[data-open="pf"]').onclick=openProvFair;
@@ -2494,25 +2536,37 @@ function openLeaderboard(){
   const lb=SAVE.leaderboard;
   if(lb.length===0) html+='<div style="text-align:center;color:var(--dimmer);padding:30px">No entries yet — cash out big to make the board!</div>';
   else lb.slice(0,10).forEach((e,i)=>{ html+='<div class="lbrow r'+(i+1)+' '+(e.nm.includes('Big Win')?'you':'')+'"><div class="rank">'+(i+1)+'</div><div class="info"><div class="nm">'+e.nm+'</div><div class="mt">'+new Date(e.date).toLocaleDateString()+'</div></div><div class="amt">'+e.amt.toLocaleString()+' 🪙</div></div>'; });
-  sheetBody.innerHTML=html; modal.classList.add('show');
+  sheetBody.innerHTML=html; modal.classList.add('show'); openModal();
 }
 function openSettings(){
   const s=SAVE.settings;
   sheetTitle.innerHTML='⚙️ <b>Settings</b>';
+  // ponytail: toggles render as role="switch" + tabindex=0 + keyboard handler so
+  // SR users hear state and keyboard users can flip them without a mouse.
+  const sw=(id,on,label)=>'<div class="toggle '+(on?'on':'')+'" id="'+id+'" role="switch" aria-checked="'+on+'" aria-label="'+label+'" tabindex="0"></div>';
   sheetBody.innerHTML=
-    '<div class="setrow"><div><div class="nm">Music</div><div class="ds">Adaptive background soundtrack</div></div><div class="toggle '+(s.music?'on':'')+'" id="musicTog"></div></div>'+
-    '<div class="setrow"><div><div class="nm">Music Volume</div><div class="ds">Background music level</div></div><input type="range" id="musicRange" min="0" max="100" value="'+Math.round((s.musicVol||0.45)*100)+'"></div>'+
-    '<div class="setrow"><div><div class="nm">Volume</div><div class="ds">Sound effects level</div></div><input type="range" id="volRange" min="0" max="100" value="'+Math.round((s.volume||0.7)*100)+'"></div>'+
-    '<div class="setrow"><div><div class="nm">Reduced Motion</div><div class="ds">Less shake & particles</div></div><div class="toggle '+(s.reducedMotion?'on':'')+'" id="rmTog"></div></div>'+
-    '<div class="setrow"><div><div class="nm">Haptics</div><div class="ds">Vibration on mobile</div></div><div class="toggle '+(s.haptics?'on':'')+'" id="hTog"></div></div>'+
-    '<div class="setrow"><div><div class="nm">Sound</div><div class="ds">Mute / unmute all audio</div></div><div class="toggle '+(!SAVE.mute?'on':'')+'" id="muteTog"></div></div>';
+    '<div class="setrow"><div><div class="nm">Fullscreen</div><div class="ds">Immersive play · press F to toggle anytime</div></div>'+sw('fsTog', !!(document.fullscreenElement||document.webkitFullscreenElement),'Fullscreen')+'</div>'+
+    '<div class="setrow"><div><div class="nm">Music</div><div class="ds">Adaptive background soundtrack</div></div>'+sw('musicTog', s.music,'Music')+'</div>'+
+    '<div class="setrow"><div><div class="nm">Music Volume</div><div class="ds">Background music level</div></div><input type="range" id="musicRange" min="0" max="100" value="'+Math.round((s.musicVol||0.45)*100)+'" aria-label="Music volume"></div>'+
+    '<div class="setrow"><div><div class="nm">Volume</div><div class="ds">Sound effects level</div></div><input type="range" id="volRange" min="0" max="100" value="'+Math.round((s.volume||0.7)*100)+'" aria-label="Sound effects volume"></div>'+
+    '<div class="setrow"><div><div class="nm">Reduced Motion</div><div class="ds">Less shake & particles</div></div>'+sw('rmTog', s.reducedMotion,'Reduced motion')+'</div>'+
+    '<div class="setrow"><div><div class="nm">Haptics</div><div class="ds">Vibration on mobile</div></div>'+sw('hTog', s.haptics,'Haptics')+'</div>'+
+    '<div class="setrow"><div><div class="nm">Sound</div><div class="ds">Mute / unmute all audio</div></div>'+sw('muteTog', !SAVE.mute,'Sound')+'</div>';
+  // ponytail: generic switch handler — toggles class + aria-checked, fires a callback
+  const bindSwitch=(id,cb)=>{
+    const el=document.getElementById(id); if(!el)return;
+    const flip=()=>{ const on=!el.classList.contains('on'); el.classList.toggle('on',on); el.setAttribute('aria-checked',on); cb(on); };
+    el.onclick=flip;
+    el.onkeydown=e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); flip(); } };
+  };
   document.getElementById('musicRange').oninput=e=>{ s.musicVol=Number(e.target.value)/100; A.setMusicVol(s.musicVol); save(); };
-  document.getElementById('musicTog').onclick=function(){ s.music=!s.music; this.classList.toggle('on'); A.setMusicOn(s.music); save(); };
+  bindSwitch('fsTog', ()=>toggleFs());
+  bindSwitch('musicTog', on=>{ s.music=on; A.setMusicOn(on); save(); });
   document.getElementById('volRange').oninput=e=>{ s.volume=Number(e.target.value)/100; SAVE.volume=s.volume; A.setVol(s.volume); save(); };
-  document.getElementById('rmTog').onclick=function(){ s.reducedMotion=!s.reducedMotion; this.classList.toggle('on'); save(); };
-  document.getElementById('hTog').onclick=function(){ s.haptics=!s.haptics; this.classList.toggle('on'); save(); };
-  document.getElementById('muteTog').onclick=function(){ SAVE.mute=!SAVE.mute; this.classList.toggle('on'); A.setMute(SAVE.mute); document.getElementById('muteBtn').textContent=SAVE.mute?'🔇':'🔊'; save(); };
-  modal.classList.add('show');
+  bindSwitch('rmTog', on=>{ s.reducedMotion=on; save(); });
+  bindSwitch('hTog', on=>{ s.haptics=on; save(); });
+  bindSwitch('muteTog', on=>{ SAVE.mute=!on; A.setMute(SAVE.mute); const mb=document.getElementById('muteBtn'); if(mb)mb.textContent=SAVE.mute?'🔇':'🔊'; save(); });
+  modal.classList.add('show'); openModal();
 }
 function openProvFair(){
   sheetTitle.innerHTML='🔐 <b>Provably Fair</b>';
@@ -2537,7 +2591,7 @@ function openProvFair(){
   html+='<div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px">Recent Reveals — tap VERIFY</div>';
   if(SAVE.provReveals.length===0) html+='<div style="color:var(--dimmer);text-align:center;padding:14px">Play rounds to see verified reveals</div>';
   else SAVE.provReveals.slice(0,5).forEach((r,i)=>{ html+='<div style="background:rgba(0,0,0,.25);border:1px solid var(--brd);border-radius:10px;padding:10px;margin-bottom:6px;font-family:var(--mono);font-size:10px" data-rv="'+i+'"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="color:var(--dim)">nonce '+r.nonce+(r.server?' 🔒':'')+' → stored '+r.crash.toFixed(2)+'×</span><button class="actbtn" style="padding:3px 8px;font-size:9px" data-verify="'+i+'">VERIFY</button></div><div style="color:var(--txt);word-break:break-all">seed: '+r.seed+'</div><div class="pfres" style="margin-top:4px;color:var(--dimmer);font-size:9px">— not verified yet —</div></div>'; });
-  sheetBody.innerHTML=html; modal.classList.add('show');
+  sheetBody.innerHTML=html; modal.classList.add('show'); openModal();
   if(!online){ sha256Hex(SAVE.serverSeed).then(h=>{ const el=document.getElementById('srvHash'); if(el)el.textContent=h.slice(0,32)+'…'; }); }
   const pfRand=document.getElementById('pfRand');
   if(pfRand) pfRand.onclick=()=>{ SAVE.clientSeed=randHex(8); save(); const inp=document.getElementById('pfClient'); if(inp)inp.value=SAVE.clientSeed; toast('Client seed rolled — next round uses it.'); };
@@ -2568,7 +2622,7 @@ function openHelp(){
     '<p style="margin-bottom:10px"><b style="color:var(--gold)">Streaks:</b> Consecutive wins add a <b style="color:var(--gold)">bonus %</b> to your payouts!</p>'+
     '<p><b style="color:var(--gold)">Tip:</b> Use 2 slots — one safe (low auto), one greedy (high auto).</p>'+
   '</div>';
-  modal.classList.add('show');
+  modal.classList.add('show'); openModal();
 }
 
 /* ---------- Header buttons ---------- */
@@ -2589,15 +2643,43 @@ document.getElementById('playBtn').onclick=async ()=>{
   if(SAVE.rp.excludedUntil && Date.now()<SAVE.rp.excludedUntil){ setTimeout(()=>toast('🚫 Self-exclusion active — betting is locked. See Responsible Play.'),800); }
   if(!SAVE.tutorialDone){ SAVE.tutorialDone=true; save(); setTimeout(openHelp,400); }
 };
-window.addEventListener('keydown',e=>{ if(e.code==='Space'){
-  // Don't hijack spacebar when the user is typing in a bet/auto input or any
-  // form field — otherwise editing an amount mid-round triggers a stray cashout.
+window.addEventListener('keydown',e=>{
+  // Don't hijack keys when the user is typing in a bet/auto input or any form field.
   const tag=document.activeElement && document.activeElement.tagName;
-  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
-  e.preventDefault();
-  if(!G.started){document.getElementById('playBtn').click();return;}
-  const b=G.bets.find(x=>x.placed&&!x.cashedOut); if(b)onBetBtn(b);
-} });
+  const typing = tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
+  // Esc closes any open modal (also covered by the modal's own handler, this is a backstop)
+  if(e.key==='Escape' && modal.classList.contains('show')){ e.preventDefault(); closeModal(); return; }
+  // F toggles native fullscreen — the simplest immersive play UX, no custom UI needed
+  if((e.key==='f'||e.key==='F') && !typing){ e.preventDefault(); toggleFs(); return; }
+  if(e.code==='Space'){
+    if(typing) return;
+    e.preventDefault();
+    if(!G.started){document.getElementById('playBtn').click();return;}
+    const b=G.bets.find(x=>x.placed&&!x.cashedOut); if(b)onBetBtn(b);
+  }
+});
+/* ponytail: Fullscreen API with cross-browser fallbacks. Prefers the root #app
+   container so the whole shell goes immersive. iOS Safari on iPhone doesn't support
+   FullscreenAPI on elements (only <video>); the API calls silently no-op there,
+   which is fine — the game already uses viewport-fit=cover + safe-area-inset. */
+function toggleFs(){
+  const el=document.getElementById('app');
+  const isFs=document.fullscreenElement||document.webkitFullscreenElement;
+  if(isFs){
+    (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
+  }else{
+    const req=el.requestFullscreen||el.webkitRequestFullscreen;
+    if(req) req.call(el).catch(()=>{ /* user gesture or unsupported — ignore */ });
+  }
+}
+document.addEventListener('fullscreenchange', ()=>{ syncFsState(); });
+document.addEventListener('webkitfullscreenchange', ()=>{ syncFsState(); });
+function syncFsState(){
+  const isFs=!!(document.fullscreenElement||document.webkitFullscreenElement);
+  document.body.classList.toggle('is-fs', isFs);
+  const tog=document.getElementById('fsTog'); if(tog) tog.classList.toggle('on', isFs);
+  announce(isFs?'Entered fullscreen.':'Exited fullscreen.');
+}
 window.addEventListener('pointerdown',()=>{
 	  A.resume();
 	  A.setMute(SAVE.mute); A.setVol(SAVE.settings.volume);
@@ -2909,7 +2991,7 @@ function openChest(){
   const grid=document.getElementById('chestGrid'); const result=document.getElementById('chestResult');
   result.textContent='Pick a chest!'; result.style.color='var(--gold)';
   grid.querySelectorAll('.chest').forEach(c=>{ c.className='chest'; c.textContent='🎁'; });
-  modal.classList.add('show');
+  modal.classList.add('show'); openModal();
   // ponytail: prizes were prizes[clickedIndex] — chest #1 was ALWAYS 200, #2 always 400,
   // #3 always 100, and the 💰 highlight was random & unrelated to what you got. Now we
   // Fisher–Yates shuffle once per open so each chest holds a genuinely random prize,
@@ -3045,7 +3127,7 @@ function openResponsible(){
     '<button class="btn" data-excl="604800000" style="flex:1;padding:11px;font-size:11px;background:linear-gradient(180deg,#5a4a6a,#3a2e48);color:#fff">7 days</button>'+
     '</div>';
   html+='<div style="font-size:11px;color:var(--dimmer);line-height:1.5">While excluded, the BET button is disabled. Free coins and existing balance remain — you just can\'t wager.</div>';
-  sheetBody.innerHTML=html; modal.classList.add('show');
+  sheetBody.innerHTML=html; modal.classList.add('show'); openModal();
   const rpLoss=document.getElementById('rpLoss');
   if(rpLoss) rpLoss.onchange=()=>{ rp.lossLimit=Math.max(0,Math.floor(Number(rpLoss.value)||0)); save(); openResponsible(); };
   const rpReMins=document.getElementById('rpReMins');
@@ -3228,7 +3310,7 @@ const RM = (() => {
     const signedIn = !!user;
     sheetTitle.textContent = signedIn ? '💰 Wallet' : '🔐 Sign in';
     sheetBody.innerHTML = signedIn ? walletHtml() : authHtml();
-    modal.classList.add('show');
+    modal.classList.add('show'); openModal();
     bindWalletEvents();
   }
 
