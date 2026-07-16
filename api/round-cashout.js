@@ -80,8 +80,7 @@ export default async function handler(req) {
     });
   }
 
-  // Valid cashout at the authoritative multiplier. Count it against the cap.
-  markCashout(token, p.mac);
+  // Valid cashout at the authoritative multiplier.
   const honored = Math.floor(serverMult * 100) / 100;
 
   // Real-money settlement: server looks up the caller's open bet on this token
@@ -95,9 +94,17 @@ export default async function handler(req) {
     } catch (e) {
       // Settlement failed AFTER we validated the cashout. The bet stays 'open'
       // and the client retries; we do NOT return valid:true without a settlement.
+      // Note: we intentionally do NOT markCashout() here — settling the per-token
+      // slot only after success keeps a transient RPC error from exhausting the
+      // cap (MAX_CASHOUTS_PER_TOKEN=2) and stranding the winning bet as 'spent'.
       return json({ ok: false, error: 'settle-failed', retry: true, serverTime: now }, 500);
     }
   }
+
+  // Settlement succeeded (or virtual mode): now count this cashout against the
+  // per-round cap. settle_win_by_token is idempotent on bet.status, so marking
+  // after success is safe; a retried request re-settles the same already-won bet.
+  markCashout(token, p.mac);
 
   return json({
     ok: true,

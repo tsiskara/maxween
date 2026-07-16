@@ -20,7 +20,9 @@ export default async function handler(req, res) {
   await sb.rpc('ensure_wallet');
 
   const { data: w } = await sb.from('wallets').select('balance_usdt').eq('user_id', user.id).single();
-  const { data: openBets } = await sb.from('bets').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'open');
+  // head:true → supabase-js returns data:null and the total in `count`.
+  // Destructuring `data` here yields null, so read `count` instead.
+  const { count: openBets } = await sb.from('bets').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'open');
   const { data: ledger } = await sb.from('ledger')
     .select('id,type,amount_usdt,ref_type,created_at')
     .eq('user_id', user.id).order('id', { ascending: false }).limit(20);
@@ -28,7 +30,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     ok: true,
     balance: Number((w && w.balance_usdt) || 0),
-    openBets: (openBets && openBets.length) || 0,
+    openBets: openBets || 0,
     ledger: (ledger || []).map(r => ({ ...r, amount_usdt: Number(r.amount_usdt) })),
   });
 }

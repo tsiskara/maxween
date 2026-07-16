@@ -28,9 +28,15 @@ export default async function handler(req, res) {
   const body = typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}');
   const amount = Number(body.amountUsdt);
   const address = String(body.address || '').trim();
-  const currency = (body.currency && String(body.currency).replace(/[^a-z0-9]/gi, '').slice(0, 20)) || 'usdttrc20';
+  // The /v1/payout `amount` is denominated in `currency`. We debit in USDT, so we
+  // only allow USDT-pegged tokens where 1 unit == 1 USDT — sending raw USDT units
+  // for e.g. BTC would request a catastrophically wrong payout. Add a price
+  // conversion before enabling other coins.
+  const ALLOWED_CURRENCIES = new Set(['usdttrc20', 'usdtbsc', 'usdterc20', 'usdtpoly', 'usdtavax', 'usdtton']);
+  const currency = (body.currency && String(body.currency).replace(/[^a-z0-9]/gi, '').slice(0, 20).toLowerCase()) || 'usdttrc20';
 
   if (!Number.isFinite(amount) || amount < 1) return res.status(400).json({ ok: false, error: 'bad-amount' });
+  if (!ALLOWED_CURRENCIES.has(currency)) return res.status(400).json({ ok: false, error: 'unsupported-currency' });
   if (address.length < 10) return res.status(400).json({ ok: false, error: 'bad-address' });
 
   const sb = sbUser(req);

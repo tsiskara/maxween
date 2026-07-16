@@ -30,9 +30,19 @@ export default async function handler(req, res) {
   }
   const payCurrency = (body.payCurrency && String(body.payCurrency).replace(/[^a-z0-9]/gi, '').slice(0, 20)) || undefined;
 
-  const origin = req.headers.origin || req.headers.referer || '';
-  const base = origin.replace(/\/$/, '') || '';
-  const ipnUrl = `${base.replace(/^http:/, 'https')}/api/nowpayments-webhook`;
+  // Server-owned public base URL — never trust a client header for the IPN
+  // callback: NowPayments pings it server-side, and Origin/Referer are absent
+  // or relative for direct/cors-less calls (which would make the IPN silently
+  // fail and deposits never get credited). Fall back to the header only if the
+  // operator hasn't set APP_BASE_URL.
+  const cfgBase = (process.env.APP_BASE_URL || '').replace(/\/$/, '');
+  const hdrBase = (req.headers.origin || req.headers.referer || '').replace(/\/$/, '');
+  const rawBase = cfgBase || hdrBase;
+  if (!/^https:\/\/.+/.test(rawBase)) {
+    return res.status(500).json({ ok: false, error: 'app-base-url-not-configured' });
+  }
+  const base = rawBase.replace(/^http:/, 'https');
+  const ipnUrl = `${base}/api/nowpayments-webhook`;
   const successUrl = `${base}/?deposit=success`;
   const cancelUrl = `${base}/?deposit=cancel`;
 
