@@ -2347,12 +2347,12 @@ function buildBetCard(b){
     '<button class="betbtn '+btnCls+'">'+btnTxt+'<span class="sub">'+btnSub+'</span></button>';
   const amtIn=card.querySelector('.amt'), autIn=card.querySelector('.aut');
   if(G.phase===PH.BET && !b.placed){
-    amtIn.addEventListener('input',()=>{ b.amount=Math.max(CFG.MIN_BET,Math.floor(Number(amtIn.value)||CFG.MIN_BET)); missionEvent('betSize',b.amount); });
+    amtIn.addEventListener('input',()=>{ b.amount=clampStake(Math.floor(Number(amtIn.value)||CFG.MIN_BET)); missionEvent('betSize',b.amount); });
     autIn.addEventListener('input',()=>{ b.autoAt=Math.max(1.01,Number(autIn.value)||10); });
     card.querySelectorAll('.quick-mini button').forEach(qb=>{ qb.onclick=()=>{ A.tick();
-      if(qb.dataset.mul) b.amount=Math.max(CFG.MIN_BET,Math.round(b.amount*Number(qb.dataset.mul)));
-      else if(qb.dataset.set==='max') b.amount=Math.max(CFG.MIN_BET,Math.floor(G.balance));
-      else b.amount=Number(qb.dataset.set);
+      if(qb.dataset.mul) b.amount=clampStake(Math.round(b.amount*Number(qb.dataset.mul)));
+      else if(qb.dataset.set==='max') b.amount=clampStake(Math.floor(G.balance));
+      else b.amount=clampStake(Number(qb.dataset.set));
       amtIn.value=b.amount; missionEvent('betSize',b.amount);
     };});
   } else { amtIn.disabled=true; autIn.disabled=true; card.querySelectorAll('.quick-mini button').forEach(b2=>b2.style.opacity=.3); }
@@ -2365,7 +2365,7 @@ function onBetBtn(b){
     if(b.placed){ b.placed=false; G.balance+=b.amount; updateBalance(); renderBets(); A.tick(); return; }
     if(b.amount>G.balance){ toast('Not enough coins'); return; }
     if(!rpCheckBet(b.amount)){ A.tick(); return; }
-    b.amount=Math.max(CFG.MIN_BET,Math.floor(b.amount));
+    b.amount=clampStake(Math.floor(b.amount));
     G.balance-=b.amount; b.placed=true; updateBalance(); A.bet(); haptic(15); renderBets();
     missionEvent('betSize',b.amount); renderBotsTable();   // fix: betSize mission + live table
     // Real-money: bind this bet server-side so the stake is really debited.
@@ -2373,6 +2373,18 @@ function onBetBtn(b){
     // If binding fails (insufficient balance / network), refund the local debit.
     if(window.RM && RM.mode==='real' && G.roundToken){ RM.bindBet({ idx:b.idx, amount:b.amount, roundToken:G.roundToken }).then(r=>{ if(!r.bound){ b.placed=false; renderBets(); } }); }
   } else if(G.phase===PH.FLY){ doCashOut(b); }
+}
+/* Clamp a stake to the live operator table limit (real-money mode only).
+   In virtual-coin mode LIVE_LIMITS is undefined and this is a no-op pass-through.
+   Always floors at MIN_BET. Pure UI guard — the server re-checks authoritatively. */
+function clampStake(amt){
+  amt=Math.max(CFG.MIN_BET,Math.floor(amt||CFG.MIN_BET));
+  const cap=(window.LIVE_LIMITS&&window.LIVE_LIMITS.maxStakeUsdt)||Infinity;
+  if(amt>cap){
+    amt=Math.max(CFG.MIN_BET,Math.floor(cap));
+    toast('Max bet '+amt);
+  }
+  return amt;
 }
 	function updateBetsLive(){
 	  for(const b of G.bets){
@@ -3176,8 +3188,10 @@ function init(){
   const tgu = TG.user();
   if(tgu && tgu.name){ try{ document.querySelectorAll('.lfrow .nm').forEach(()=>{}); }catch(e){} }
   apiProbe().catch(()=>{ _apiAvailable=false; });
-  // Kick off real-money mode (no-op until configured/logged in).
-  RM.init();
+  // ponytail: defer RM.init() — RM is defined further down this script (temporal
+  // dead zone), so calling it inline throws ReferenceError on every load without
+  // a backend. setTimeout(0) lets the script finish evaluating first.
+  setTimeout(()=>{ if(window.RM && RM.init) RM.init(); }, 0);
 }
 init();
 
@@ -3277,11 +3291,22 @@ const RM = (() => {
         // looking up the open bet via token+user — no betId carried client-side.
         lastBalance = j.balance;
         G.balance = j.balance; SAVE.balance = j.balance; updateBalance(true);
+        // Track the effective multiplier ceiling for this bet (payout cap / stake)
+        // so the UI can show the true max win and avoid promising a payout the
+        // settlement layer will cap.
+        if (typeof j.effectiveMaxMult === 'number') betCard.effectiveMaxMult = j.effectiveMaxMult;
         return { bound: true };
       }
-      // Failed to bind (e.g. insufficient server balance) → refund the local debit.
+      // Failed to bind (e.g. insufficient server balance, stake over the live
+      // table limit) → refund the local debit and tell the player why.
       G.balance += betCard.amount; SAVE.balance = G.balance; updateBalance();
-      toast(j && j.error === 'insufficient' ? 'Insufficient balance' : 'Bet failed');
+      let msg = 'Bet failed';
+      if (j && j.error === 'insufficient') msg = 'Insufficient balance';
+      else if (j && j.error === 'stake-too-large') { msg = 'Max bet ' + Math.floor(j.maxStake); if (j.maxStake) window.LIVE_LIMITS = window.LIVE_LIMITS || {}; if (j.maxStake && window.LIVE_LIMITS) window.LIVE_LIMITS.maxStakeUsdt = j.maxStake; }
+      else if (j && j.error === 'betting-closed') msg = 'Betting closed';
+      else if (j && j.error === 'account-suspended') msg = 'Account suspended';
+      else if (j && j.error === 'maintenance') { msg = 'Maintenance — try later'; window.MAINTENANCE = true; }
+      toast(msg);
       return { bound: false, refunded: true };
     } catch (e) {
       G.balance += betCard.amount; SAVE.balance = G.balance; updateBalance();
@@ -3453,6 +3478,15 @@ const RM = (() => {
         const r = await fetch('/api/config');
         const j = await r.json();
         if (j && j.enabled) { SB_URL = j.supabaseUrl; SB_KEY = j.supabaseAnonKey; enabled = true; }
+        // Live operator limits (table stakes/payout caps) + maintenance flag.
+        // The client clamps the bet UI to maxStakeUsdt and can show a banner
+        // when maintenance is on. houseEdge/maxMult are frozen and already
+        // match the compiled-in CFG, so verify() stays consistent.
+        if (j && j.game) window.LIVE_LIMITS = {
+          maxStakeUsdt: Number(j.game.maxStakeUsdt) || Infinity,
+          maxPayoutUsdt: Number(j.game.maxPayoutUsdt) || Infinity,
+        };
+        if (j && j.maintenance) window.MAINTENANCE = true;
       } catch (e) { /* local dev or unconfigured — stay virtual */ }
     }
     if (!enabled) return; // silent: stays virtual-coin

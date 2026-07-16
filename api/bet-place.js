@@ -14,7 +14,7 @@
  * Auth required. Returns the server betId the client must send at cashout.
  */
 import { sbUser, getUser, hasSupabase } from '../lib/supabase.js';
-import { decryptToken, multAt, json as edgeJson, corsHeaders, clientIp, rateGate, readJsonBody, CFG, isUserBlocked, isMaintenance } from '../lib/server-engine.js';
+import { decryptToken, multAt, json as edgeJson, corsHeaders, clientIp, rateGate, readJsonBody, CFG, isUserBlocked, isMaintenance, getLiveSettings } from '../lib/server-engine.js';
 
 // ponytail: server-side betting window. The client only places bets during its
 // BET phase (G.phase===PH.BET, ~5s before flight), but the server can't trust
@@ -34,7 +34,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'method-not-allowed' });
   if (!rateGate(clientIp(req), 30, 10000)) return res.status(429).json({ ok: false, error: 'rate-limited' });
 
-  if (isMaintenance()) return res.status(503).json({ ok: false, error: 'maintenance' });
+  const settings = await getLiveSettings();
+  if (settings.maintenance) return res.status(503).json({ ok: false, error: 'maintenance' });
 
   const user = await getUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'unauthorized' });
@@ -46,13 +47,13 @@ export default async function handler(req, res) {
   if (typeof token !== 'string' || token.length < 20 || token.length > 2000) {
     return res.status(400).json({ ok: false, error: 'bad-token' });
   }
-  // Table limit: stake ceiling. Reject anything above MAX_STAKE_USDT rather
+  // Table limit: stake ceiling. Reject anything above the live max stake rather
   // than silently clamping — the player should know the bet wasn't accepted.
   if (!Number.isFinite(stake) || stake <= 0) {
     return res.status(400).json({ ok: false, error: 'bad-stake' });
   }
-  if (stake > CFG.MAX_STAKE_USDT) {
-    return res.status(400).json({ ok: false, error: 'stake-too-large', maxStake: CFG.MAX_STAKE_USDT });
+  if (stake > settings.maxStakeUsdt) {
+    return res.status(400).json({ ok: false, error: 'stake-too-large', maxStake: settings.maxStakeUsdt });
   }
 
   // Betting-window enforcement: decrypt the round token to read `started` and
@@ -93,7 +94,8 @@ export default async function handler(req, res) {
     betId: data[0].bet_id,
     balance: data[0].balance,
     // Surface the payout cap so the client can show the true max win for this bet.
-    maxPayout: CFG.MAX_PAYOUT_USDT,
-    effectiveMaxMult: Math.min(CFG.MAX_MULT, CFG.MAX_PAYOUT_USDT / stake),
+    // The effective multiplier ceiling is min(MAX_MULT, maxPayout / stake).
+    maxPayout: settings.maxPayoutUsdt,
+    effectiveMaxMult: Math.min(CFG.MAX_MULT, settings.maxPayoutUsdt / stake),
   });
 }

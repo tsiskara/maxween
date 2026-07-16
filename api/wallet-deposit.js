@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   // Refuse new deposits for blocked users (they're under review) and during
   // maintenance. Existing balances remain fully withdrawable.
   if (await isUserBlocked(user.id)) return res.status(403).json({ ok: false, error: 'account-suspended' });
-  if (isMaintenance()) return res.status(503).json({ ok: false, error: 'maintenance' });
+  if (await isMaintenance()) return res.status(503).json({ ok: false, error: 'maintenance' });
   if (!hasNowpayments()) return res.status(503).json({ ok: false, error: 'payments-not-configured' });
 
   const body = typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}');
