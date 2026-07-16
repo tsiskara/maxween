@@ -11,7 +11,7 @@
  */
 import { sbUser, getUser, hasSupabase } from '../lib/supabase.js';
 import { createInvoice, hasNowpayments } from '../lib/nowpayments.js';
-import { json, corsHeaders, clientIp, rateGate } from '../lib/server-engine.js';
+import { json, corsHeaders, clientIp, rateGate, isUserBlocked, isMaintenance } from '../lib/server-engine.js';
 
 export default async function handler(req, res) {
   if (!hasSupabase()) return res.status(503).json({ ok: false, error: 'server-not-configured' });
@@ -21,6 +21,10 @@ export default async function handler(req, res) {
 
   const user = await getUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'unauthorized' });
+  // Refuse new deposits for blocked users (they're under review) and during
+  // maintenance. Existing balances remain fully withdrawable.
+  if (await isUserBlocked(user.id)) return res.status(403).json({ ok: false, error: 'account-suspended' });
+  if (isMaintenance()) return res.status(503).json({ ok: false, error: 'maintenance' });
   if (!hasNowpayments()) return res.status(503).json({ ok: false, error: 'payments-not-configured' });
 
   const body = typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}');
