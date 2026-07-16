@@ -27,6 +27,31 @@ create table if not exists public.profiles (
   blocked      boolean not null default false
 );
 
+/* ============ operator_settings ============
+   Single-row table for the RUNTIME-configurable operator knobs that do NOT
+   affect provably-fair math: table limits and maintenance.
+
+   IMPORTANT — what does NOT live here:
+     - house_edge and max_mult. These drive crashFromHash(), which the client
+       must mirror EXACTLY in verify(). They are compiled into CFG from env
+       and change only via redeploy (auditable, can't be flipped mid-session).
+       Putting them in a runtime table would break provably-fair verification
+       unless baked into every token — determinism via redeploy is the correct
+       trade for a real-money product.
+
+   What DOES live here (read by the Edge layer at request time):
+     - max_stake_usdt / max_payout_usdt: the underwriting cap. Mutable because
+       the operator adjusts exposure without touching game math.
+     - maintenance: pause new bets/deposits; withdrawals stay open. */
+create table if not exists public.operator_settings (
+  id              int primary key default 1 check (id = 1),
+  max_stake_usdt  numeric(18,8) not null default 1000 check (max_stake_usdt > 0),
+  max_payout_usdt numeric(18,8) not null default 50000 check (max_payout_usdt > 0),
+  maintenance     boolean not null default false,
+  updated_at      timestamptz not null default now()
+);
+insert into public.operator_settings(id) values (1) on conflict (id) do nothing;
+
 /* ============ wallets ============ */
 create table if not exists public.wallets (
   user_id       uuid primary key references auth.users(id) on delete cascade,
@@ -202,6 +227,7 @@ create or replace function public.settle_win(
 ) returns table(ok boolean, balance numeric, payout numeric, reason text)
 language plpgsql security definer set search_path = public as $$
 declare b bets%rowtype; uid uuid; payout numeric; v bigint; _bal numeric;
+        cap numeric; effective_mult numeric; raw numeric;
 begin
   select * into b from bets where id = p_bet_id for update;
   if not found then
@@ -217,16 +243,27 @@ begin
     return query select false, 0::numeric, 0::numeric, 'bad-mult'::text; return;
   end if;
 
-  payout := b.stake_usdt * p_mult;
+  -- Table-limit enforcement at the settlement layer. The crash point is never
+  -- touched (provably-fair), but the payout is capped to MAX_PAYOUT_USDT. This
+  -- is the operator's underwriting limit; without it a whale could win up to
+  -- stake*MAX_MULT. The cap is read live from operator_settings so a config
+  -- bug in the Edge layer can never cause an overpayment.
+  raw := b.stake_usdt * p_mult;
+  select max_payout_usdt into cap from operator_settings where id = 1;
+  if cap is null or cap <= 0 then cap := 50000; end if; -- safe default
+  payout := least(raw, cap);
+  effective_mult := payout / b.stake_usdt;
+
   update wallets set balance_usdt = balance_usdt + payout, version = version + 1, updated_at = now()
     where user_id = uid returning version into v;
 
-  update bets set status='won', mult=p_mult, payout_usdt=payout, settled_at=now() where id = p_bet_id;
+  update bets set status='won', mult=effective_mult, payout_usdt=payout, settled_at=now() where id = p_bet_id;
 
   insert into ledger(user_id, type, amount_usdt, balance_after, ref_type, ref_id, meta)
     values (uid, 'win', payout,
       (select balance_usdt from wallets where user_id=uid),
-      'bet', p_bet_id::text, jsonb_build_object('mult', p_mult));
+      'bet', p_bet_id::text,
+      jsonb_build_object('mult', effective_mult, 'capped', raw > cap, 'requested_mult', p_mult));
 
   select balance_usdt into _bal from wallets where user_id = uid;
   return query select true, _bal, payout, ''::text;
@@ -276,16 +313,24 @@ begin
     return;
   end if;
 
-  declare payout numeric;
+  declare payout numeric; raw numeric; cap numeric; effective_mult numeric;
   begin
-    payout := b.stake_usdt * p_mult;
+    -- Table-limit enforcement (same as settle_win): cap payout to
+    -- MAX_PAYOUT_USDT, never touch the provably-fair crash point.
+    raw := b.stake_usdt * p_mult;
+    select max_payout_usdt into cap from operator_settings where id = 1;
+    if cap is null or cap <= 0 then cap := 50000; end if;
+    payout := least(raw, cap);
+    effective_mult := payout / b.stake_usdt;
+
     update wallets set balance_usdt = balance_usdt + payout, version = version + 1, updated_at = now()
       where user_id = uid returning version into v;
-    update bets set status='won', mult=p_mult, payout_usdt=payout, settled_at=now() where id = b.id;
+    update bets set status='won', mult=effective_mult, payout_usdt=payout, settled_at=now() where id = b.id;
     insert into ledger(user_id, type, amount_usdt, balance_after, ref_type, ref_id, meta)
       values (uid, 'win', payout,
         (select balance_usdt from wallets where user_id=uid),
-        'bet', b.id::text, jsonb_build_object('mult', p_mult));
+        'bet', b.id::text,
+        jsonb_build_object('mult', effective_mult, 'capped', raw > cap, 'requested_mult', p_mult));
 
     select balance_usdt into _bal from wallets where user_id = uid;
     return query select true, b.id, _bal, payout, ''::text;
@@ -393,6 +438,18 @@ begin
   return true;
 end; $$;
 
+-- Live operator settings (anon-readable). The Edge layer reads this to pick
+-- up table limits / maintenance without a redeploy. house_edge and max_mult
+-- are NOT here — they're compiled into the server from env (changing them
+-- requires a redeploy so provably-fair determinism is auditable; see the
+-- comment on operator_settings).
+create or replace function public.get_operator_settings()
+returns table(max_stake_usdt numeric, max_payout_usdt numeric, maintenance boolean)
+language sql security definer set search_path = public as $$
+  select max_stake_usdt, max_payout_usdt, maintenance
+  from operator_settings where id = 1;
+$$;
+
 -- ============ RLS ============
 alter table public.profiles     enable row level security;
 alter table public.wallets      enable row level security;
@@ -400,6 +457,11 @@ alter table public.ledger       enable row level security;
 alter table public.bets         enable row level security;
 alter table public.deposits     enable row level security;
 alter table public.withdrawals  enable row level security;
+-- operator_settings is a single shared row; anon-readable so the Edge layer
+-- (which has no SDK) can SELECT it directly. Writes are operator-only via
+-- the admin API (gated by ADMIN_TOKEN), never via anon/authenticated.
+alter table public.operator_settings enable row level security;
+create policy "settings read" on public.operator_settings for select using (true);
 
 -- Users read their own rows only. All writes go through SECURITY DEFINER RPCs,
 -- so we grant NO direct insert/update/delete to the anon/authenticated roles.

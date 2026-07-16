@@ -5,7 +5,7 @@
  * Auth required (Bearer JWT).
  */
 import { sbUser, getUser, hasSupabase, authHeader } from '../lib/supabase.js';
-import { json, corsHeaders, clientIp, rateGate } from '../lib/server-engine.js';
+import { json, corsHeaders, clientIp, rateGate, isUserBlocked, isMaintenance } from '../lib/server-engine.js';
 
 export default async function handler(req, res) {
   if (!hasSupabase()) return res.status(503).json({ ok: false, error: 'server-not-configured' });
@@ -31,6 +31,8 @@ export default async function handler(req, res) {
     ok: true,
     balance: Number((w && w.balance_usdt) || 0),
     openBets: openBets || 0,
+    blocked: await isUserBlocked(user.id),
+    maintenance: isMaintenance(),
     ledger: (ledger || []).map(r => ({ ...r, amount_usdt: Number(r.amount_usdt) })),
   });
 }

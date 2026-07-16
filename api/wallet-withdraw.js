@@ -13,7 +13,7 @@
  */
 import { sbUser, getUser, hasSupabase } from '../lib/supabase.js';
 import { createPayout, hasNowpayments } from '../lib/nowpayments.js';
-import { corsHeaders, clientIp, rateGate } from '../lib/server-engine.js';
+import { corsHeaders, clientIp, rateGate, isUserBlocked, isMaintenance } from '../lib/server-engine.js';
 
 export default async function handler(req, res) {
   if (!hasSupabase()) return res.status(503).json({ ok: false, error: 'server-not-configured' });
@@ -21,8 +21,12 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'method-not-allowed' });
   if (!rateGate(clientIp(req), 10, 10000)) return res.status(429).json({ ok: false, error: 'rate-limited' });
 
+  // Withdrawals stay open during maintenance (players must always be able to
+  // exit — trapping funds is fraud). Blocked users are refused new payouts
+  // pending operator review; the operator can still issue a manual refund.
   const user = await getUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'unauthorized' });
+  if (await isUserBlocked(user.id)) return res.status(403).json({ ok: false, error: 'account-suspended' });
   if (!hasNowpayments()) return res.status(503).json({ ok: false, error: 'payments-not-configured' });
 
   const body = typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}');
