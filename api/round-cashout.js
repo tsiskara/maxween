@@ -7,19 +7,19 @@
  * The server ignores the client's claimedMult for the authoritative
  * decision and instead derives the real mult from its own clock.
  *
+ * Money (when Supabase configured):
+ *   Calls settle_win_by_token(token, mult). The bet is looked up SERVER-SIDE
+ *   by (round_token, caller's user_id) — we NEVER trust a client-supplied bet
+ *   id. This closes a cheat surface and also heals the slow-network race
+ *   where betId hadn't reached the client yet. Idempotent on bet.status.
+ *
  * v7 hardening:
- *   - Post-bust grace REMOVED. A round is busted the instant
- *     serverMult >= crashAt. (Previously a 350ms window allowed a
- *     guaranteed-win strategy: poll until bust, then cash at crashAt.)
+ *   - Post-bust grace REMOVED. A round is busted the instant serverMult >= crashAt.
  *   - Per-token cashout cap (MAX_CASHOUTS_PER_TOKEN = 2, one per slot).
- *     Stops the trivial N-cashout replay within an instance. Residual:
- *     cross-instance replay after Map reset needs KV — filed as follow-up.
- *   - Client `amount` is used only for the payout figure (stake is not yet
- *     bound server-side — see round-start). Validity is decided purely from
- *     the server clock + crashAt.
+ *   - Settlement is gated on a verified open bet belonging to the caller.
  *
  * Returns:
- *   { ok: true, valid: true,  mult, win }
+ *   { ok: true, valid: true,  mult, win, balance? }
  *   { ok: true, valid: false, reason: 'busted'|'spent', ... }
  */
 
@@ -29,6 +29,7 @@ import {
   decryptToken, multAt, sha256Hex, json, rateGate, clientIp, hasSecret, ctEqual, CFG, readJsonBody,
   cashCountFor, markCashout,
 } from '../lib/server-engine.js';
+import { hasSupabaseEdge, rpc } from '../lib/supabase-edge.js';
 
 export default async function handler(req) {
   if (!hasSecret()) return json({ ok: false, error: 'server-not-configured' }, 503);
@@ -64,6 +65,11 @@ export default async function handler(req) {
 
   // v7: no grace. Busted the instant the multiplier reaches crashAt.
   if (serverMult >= p.crashAt) {
+    // Token-side loss settle: any open bets on this token for this caller flip
+    // to 'lost' so they aren't left dangling. (Stake was debitted at bet time.)
+    if (hasSupabaseEdge()) {
+      try { await rpc('settle_token_losses_for_user', { p_round_token: token }, { req }); } catch (_) {}
+    }
     return json({
       ok: true, valid: false, reason: 'busted',
       crashAt: p.crashAt,
@@ -77,11 +83,28 @@ export default async function handler(req) {
   // Valid cashout at the authoritative multiplier. Count it against the cap.
   markCashout(token, p.mac);
   const honored = Math.floor(serverMult * 100) / 100;
+
+  // Real-money settlement: server looks up the caller's open bet on this token
+  // and credits stake*mult. No client-supplied id trusted. Falls through cleanly
+  // in virtual-coin mode (no Supabase) or when the caller had no open bet.
+  let balance = null;
+  if (hasSupabaseEdge()) {
+    try {
+      const rows = await rpc('settle_win_by_token', { p_round_token: token, p_mult: honored }, { req });
+      if (rows && rows[0] && rows[0].ok) balance = Number(rows[0].balance);
+    } catch (e) {
+      // Settlement failed AFTER we validated the cashout. The bet stays 'open'
+      // and the client retries; we do NOT return valid:true without a settlement.
+      return json({ ok: false, error: 'settle-failed', retry: true, serverTime: now }, 500);
+    }
+  }
+
   return json({
     ok: true,
     valid: true,
     mult: honored,
     win: Math.round(amount * honored),
+    balance,
     serverTime: now,
   });
 }

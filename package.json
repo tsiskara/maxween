@@ -1,10 +1,13 @@
 {
   "name": "maxween",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "private": true,
   "type": "module",
-  "description": "BOOST — server-authoritative crash game (Aviator/JetX model)",
+  "description": "BOOST — server-authoritative crash game with crypto deposits/withdrawals",
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
   }
 }

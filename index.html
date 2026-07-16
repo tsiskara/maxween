@@ -457,6 +457,21 @@ canvas:focus-visible{outline-offset:-4px}
 #panel{padding-bottom:calc(11px + env(safe-area-inset-bottom,0px))}
 /* aria-live polite region for screen readers */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* Real-money wallet modal */
+.rm-auth,.rm-wallet{display:flex;flex-direction:column;gap:12px;padding:6px 2px}
+.rm-auth label,.rm-wallet label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted,#9aa)}
+.rm-auth input,.rm-wallet input,.rm-wallet select{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.35);color:#fff;font-size:15px}
+.rm-btn{padding:11px 14px;border-radius:10px;border:none;font-weight:700;cursor:pointer;font-size:14px;background:rgba(255,255,255,.08);color:#fff}
+.rm-btn.primary{background:linear-gradient(180deg,#3df0a0,#1ab568);color:#042418}
+.rm-btn.danger{background:linear-gradient(180deg,#ff8b3d,#e06a18);color:#2a1003}
+.rm-btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.15)}
+.rm-bal{font-size:18px;text-align:center;padding:8px}
+.rm-bal b{color:var(--green,#3df0a0)}
+.rm-wallet h4{margin:6px 0 2px;font-size:14px;color:var(--muted,#9aa)}
+.rm-wallet hr{border:none;border-top:1px solid rgba(255,255,255,.1);margin:6px 0}
+.rm-note,.rm-tiny{font-size:12px;color:var(--muted,#9aa);line-height:1.4}
+.rm-warn{color:#ff8b3d;font-size:13px}
+.rm-ok{color:#3df0a0;font-size:14px}
 </style>
 </head>
 <body>
@@ -720,10 +735,13 @@ async function serverRoundTick(token){
   if(!r||!r.ok) return null;
   return r;
 }
-/* Validate a cashout with the server. */
+/* Validate a cashout with the server. The server looks up the open bet by
+   token+user — no client-supplied bet id is trusted or needed. */
 async function serverRoundCashout(token, amount){
   const r=await apiPost(API.CASHOUT, { token, amount });
   if(!r||!r.ok) return null;
+  // In real-money mode the server settles + returns the authoritative balance.
+  if(typeof r.balance==='number' && window.RM && RM.mode==='real'){ RM.applyServerWin(r.balance); }
   return r;
 }
 
@@ -1954,8 +1972,11 @@ function loop(ts){
 	          G.roundHash=(tk.serverSeed||'').slice(0,16);
 	          const pfBadge=document.getElementById('pfHash');
 		  if(pfBadge){ pfBadge.textContent=G.roundHash+'… ✓'; pfBadge.style.color='var(--grn)'; pfBadge.title='Seed revealed — verifiable now.'; }
-	          if(G.phase===PH.FLY){ G.mult=G.crashAt; doCrash(); }
-	        }
+		          if(G.phase===PH.FLY){ G.mult=G.crashAt; doCrash(); }
+		          // Real-money: mark any of this caller's still-open bets on this
+		          // token as lost (stake already debitted at place time). Fire-and-forget.
+		          if(window.RM && RM.mode==='real'){ apiPost('/api/round-settle',{token:G.roundToken}).catch(()=>{}); }
+		        }
 	      }).catch(()=>{ G._tickInFlight=false; });
 	    }
 	    // ponytail: compound multiplier with subtle quadratic acceleration — creates a
@@ -2332,6 +2353,10 @@ function onBetBtn(b){
     b.amount=Math.max(CFG.MIN_BET,Math.floor(b.amount));
     G.balance-=b.amount; b.placed=true; updateBalance(); A.bet(); haptic(15); renderBets();
     missionEvent('betSize',b.amount); renderBotsTable();   // fix: betSize mission + live table
+    // Real-money: bind this bet server-side so the stake is really debited.
+    // Cashout settles by token+user on the server — no betId needed client-side.
+    // If binding fails (insufficient balance / network), refund the local debit.
+    if(window.RM && RM.mode==='real' && G.roundToken){ RM.bindBet({ idx:b.idx, amount:b.amount, roundToken:G.roundToken }).then(r=>{ if(!r.bound){ b.placed=false; renderBets(); } }); }
   } else if(G.phase===PH.FLY){ doCashOut(b); }
 }
 	function updateBetsLive(){
@@ -3069,8 +3094,302 @@ function init(){
   const tgu = TG.user();
   if(tgu && tgu.name){ try{ document.querySelectorAll('.lfrow .nm').forEach(()=>{}); }catch(e){} }
   apiProbe().catch(()=>{ _apiAvailable=false; });
+  // Kick off real-money mode (no-op until configured/logged in).
+  RM.init();
 }
 init();
+
+/* ============================================================
+ * REAL-MONEY MODE — crypto deposit / play / withdraw.
+ *
+ * Layers ON TOP of the existing virtual-coin game. When logged in:
+ *  - balance source flips from localStorage → server (Supabase).
+ *  - bets are bound server-side via /api/bet-place (real stake debited).
+ *  - cashouts credit via the server cashout (settle_win).
+ *  - deposit/withdraw UI becomes available.
+ * When logged out (or Supabase unconfigured), the classic virtual-coin
+ * game continues to work unchanged — G.balance stays the source of truth.
+ *
+ * ENV (set in Vercel): SUPABASE_URL + SUPABASE_ANON_KEY are baked into
+ * the built page via the placeholder below, OR fall back to localStorage
+ * config the operator pastes into the Wallet modal. Keeping it runtime-
+ * configurable means the game ships without secrets and the operator
+ * enables money by entering their project URL/key once.
+ * ============================================================ */
+const RM = (() => {
+  // Inline/localStorage values are used for LOCAL DEV. In production, init()
+  // fetches public config from /api/config (built from Vercel env vars), so
+  // deploying real-money mode needs zero manual index.html edits.
+  let SB_URL = (window.__SUPABASE_URL__ || localStorage.getItem('boost_sb_url') || '').trim();
+  let SB_KEY = (window.__SUPABASE_ANON_KEY__ || localStorage.getItem('boost_sb_key') || '').trim();
+  let enabled = !!(SB_URL && SB_KEY);
+  let sb = null;          // supabase browser client
+  let user = null;        // logged-in user object
+  let mode = 'virtual';   // 'virtual' | 'real'
+  let lastBalance = null;
+
+  function loadSbClient() {
+    if (sb || !enabled) return;
+    try {
+      // ponytail: load the browser UMD, then create the client. No bundler.
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      s.onload = () => { try { sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); refreshUser(); sb.auth.onAuthStateChange(() => refreshUser()); } catch (e) { console.warn('[RM] sb init failed', e); } };
+      document.head.appendChild(s);
+    } catch (e) { console.warn('[RM] load failed', e); }
+  }
+
+  /* ---------- auth ---------- */
+  async function getSession() {
+    if (!sb) return null;
+    const { data } = await sb.auth.getSession();
+    return data && data.session;
+  }
+
+  async function refreshUser() {
+    if (!sb) return null;
+    const { data } = await sb.auth.getUser();
+    user = (data && data.user) || null;
+    if (user) { mode = 'real'; await syncBalance(); }
+    else { mode = 'virtual'; }
+    updateChips();
+    return user;
+  }
+
+  async function syncBalance() {
+    if (!user) return;
+    try {
+      const r = await fetch('/api/wallet-balance', { headers: authHeaders() });
+      const j = await r.json();
+      if (j && j.ok) {
+        lastBalance = j.balance;
+        // Adopt the server balance as the authoritative G.balance in real mode.
+        G.balance = j.balance;
+        SAVE.balance = j.balance;
+        updateBalance(true);
+      }
+    } catch (e) { /* keep last known */ }
+  }
+
+  function authHeaders() {
+    if (!sb) return {};
+    const s = sb.auth.getSession && sb.auth.getSession();
+    // getSession is sync in v2 returns {data:{session}}; but guard anyway
+    const tok = sb.auth.session ? sb.auth.session.access_token : null;
+    return tok ? { Authorization: 'Bearer ' + tok } : {};
+  }
+
+  /* ---------- the bet/cashout binding (called by the game) ---------- */
+  // Called right after the client places a bet locally; in real mode we also
+  // bind it server-side so the stake is really debited and cashout can settle.
+  async function bindBet(betCard /* {idx, amount, roundToken} */) {
+    if (mode !== 'real' || !user) return { bound: false, virtual: true };
+    try {
+      const r = await fetch('/api/bet-place', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...await jsonAuth() },
+        body: JSON.stringify({ token: betCard.roundToken, stake: betCard.amount }),
+      });
+      const j = await r.json();
+      if (j && j.ok) {
+        // Real stake debited server-side. The server settles on cashout by
+        // looking up the open bet via token+user — no betId carried client-side.
+        lastBalance = j.balance;
+        G.balance = j.balance; SAVE.balance = j.balance; updateBalance(true);
+        return { bound: true };
+      }
+      // Failed to bind (e.g. insufficient server balance) → refund the local debit.
+      G.balance += betCard.amount; SAVE.balance = G.balance; updateBalance();
+      toast(j && j.error === 'insufficient' ? 'Insufficient balance' : 'Bet failed');
+      return { bound: false, refunded: true };
+    } catch (e) {
+      G.balance += betCard.amount; SAVE.balance = G.balance; updateBalance();
+      toast('Network error — bet not placed');
+      return { bound: false, refunded: true };
+    }
+  }
+
+  // After a server-validated cashout, the balance is updated server-side.
+  // The cashout response carries the new balance in real mode.
+  function applyServerWin(newBalance) {
+    if (typeof newBalance === 'number') {
+      lastBalance = newBalance;
+      G.balance = newBalance; SAVE.balance = newBalance; updateBalance(true);
+    }
+  }
+
+  async function jsonAuth() {
+    if (!sb) return {};
+    const { data } = await sb.auth.getSession();
+    return data && data.session ? { Authorization: 'Bearer ' + data.session.access_token } : {};
+  }
+
+  /* ---------- deposit / withdraw UI ---------- */
+  function openWallet() {
+    const signedIn = !!user;
+    sheetTitle.textContent = signedIn ? '💰 Wallet' : '🔐 Sign in';
+    sheetBody.innerHTML = signedIn ? walletHtml() : authHtml();
+    modal.classList.add('show');
+    bindWalletEvents();
+  }
+
+  function authHtml() {
+    return `
+      <div class="rm-auth">
+        <p class="rm-note">Sign in to deposit crypto and play for real. Your balance is held securely and withdrawable anytime.</p>
+        <label>Email<input id="rmEmail" type="email" placeholder="you@example.com" autocomplete="email"></label>
+        <label>Password<input id="rmPass" type="password" placeholder="••••••••" autocomplete="current-password"></label>
+        <button class="rm-btn primary" id="rmSignIn">Sign in / Sign up</button>
+        <p class="rm-tiny">By continuing you confirm you are of legal age and not in a restricted jurisdiction.</p>
+        ${!enabled ? '<p class="rm-warn">⚠ Real-money not configured. Set Supabase keys to enable.</p>' : ''}
+      </div>`;
+  }
+
+  function walletHtml() {
+    return `
+      <div class="rm-wallet">
+        <div class="rm-bal">Balance: <b>${(lastBalance != null ? lastBalance : G.balance).toFixed(2)}</b> USDT</div>
+        <button class="rm-btn primary" id="rmRefresh">↻ Refresh</button>
+        <hr>
+        <h4>Deposit</h4>
+        <label>Amount (USDT)<input id="rmDepAmt" type="number" min="1" step="0.01" value="20"></label>
+        <label>Coin (optional)<input id="rmDepCur" type="text" placeholder="btc / eth / usdttrc20 ..."></label>
+        <button class="rm-btn" id="rmDeposit">Get deposit address</button>
+        <div id="rmDepResult"></div>
+        <hr>
+        <h4>Withdraw</h4>
+        <label>Amount (USDT)<input id="rmWdAmt" type="number" min="1" step="0.01" value="20"></label>
+        <label>Address<input id="rmWdAddr" type="text" placeholder="Your withdrawal address"></label>
+        <label>Currency<select id="rmWdCur"><option value="usdttrc20">USDT (TRC20)</option><option value="btc">BTC</option><option value="eth">ETH</option></select></label>
+        <button class="rm-btn danger" id="rmWithdraw">Withdraw</button>
+        <div id="rmWdResult"></div>
+        <hr>
+        <button class="rm-btn ghost" id="rmSignOut">Sign out</button>
+      </div>`;
+  }
+
+  function bindWalletEvents() {
+    const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+    on('rmSignIn', 'click', signIn);
+    on('rmRefresh', 'click', () => syncBalance().then(() => { sheetBody.innerHTML = walletHtml(); bindWalletEvents(); }));
+    on('rmDeposit', 'click', deposit);
+    on('rmWithdraw', 'click', withdraw);
+    on('rmSignOut', 'click', signOut);
+  }
+
+  async function signIn() {
+    const email = document.getElementById('rmEmail').value.trim();
+    const pass = document.getElementById('rmPass').value;
+    if (!email || !pass) return toast('Enter email + password');
+    const btn = document.getElementById('rmSignIn'); btn.textContent = '…'; btn.disabled = true;
+    // Try sign in; on failure, sign up (Supabase handles email confirm per project settings).
+    let { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) {
+      const up = await sb.auth.signUp({ email, password: pass });
+      if (up.error) { toast(up.error.message || 'Auth failed'); btn.textContent='Sign in / Sign up'; btn.disabled=false; return; }
+      data = up.data;
+    }
+    await refreshUser();
+    if (user) { toast('Signed in'); sheetBody.innerHTML = walletHtml(); bindWalletEvents(); }
+    else { toast('Check your email to confirm'); }
+    btn.textContent = 'Sign in / Sign up'; btn.disabled = false;
+  }
+
+  async function signOut() { await sb.auth.signOut(); user = null; mode = 'virtual'; updateChips(); toast('Signed out'); sheetBody.innerHTML = authHtml(); bindWalletEvents(); }
+
+  async function deposit() {
+    const amt = Number(document.getElementById('rmDepAmt').value);
+    const cur = document.getElementById('rmDepCur').value.trim();
+    if (!amt || amt < 1) return toast('Enter an amount');
+    const out = document.getElementById('rmDepResult'); out.innerHTML = 'Creating invoice…';
+    try {
+      const r = await fetch('/api/wallet-deposit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...await jsonAuth() },
+        body: JSON.stringify({ amountUsdt: amt, payCurrency: cur || undefined }),
+      });
+      const j = await r.json();
+      if (j && j.ok && j.invoiceUrl) {
+        out.innerHTML = `<p>Send your deposit via NowPayments:</p><a class="rm-btn primary" href="${j.invoiceUrl}" target="_blank" rel="noopener">Open payment page →</a><p class="rm-tiny">Your balance updates automatically once confirmed.</p>`;
+        window.open(j.invoiceUrl, '_blank', 'noopener');
+      } else { out.innerHTML = '<p class="rm-warn">Failed to create invoice. '+(j&&j.error||'')+'</p>'; }
+    } catch (e) { out.innerHTML = '<p class="rm-warn">Network error.</p>'; }
+  }
+
+  async function withdraw() {
+    const amt = Number(document.getElementById('rmWdAmt').value);
+    const addr = document.getElementById('rmWdAddr').value.trim();
+    const cur = document.getElementById('rmWdCur').value;
+    if (!amt || amt < 1) return toast('Enter an amount');
+    if (!addr) return toast('Enter an address');
+    const out = document.getElementById('rmWdResult'); out.innerHTML = 'Processing…';
+    try {
+      const r = await fetch('/api/wallet-withdraw', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...await jsonAuth() },
+        body: JSON.stringify({ amountUsdt: amt, address: addr, currency: cur }),
+      });
+      const j = await r.json();
+      if (j && j.ok) {
+        out.innerHTML = '<p class="rm-ok">✓ Withdrawal sent. You will receive it shortly.</p>';
+        await syncBalance(); sheetBody.innerHTML = walletHtml(); bindWalletEvents();
+      } else {
+        out.innerHTML = '<p class="rm-warn">'+({insufficient:'Insufficient balance', 'payout-failed':'Payout failed — balance refunded', 'bad-address':'Invalid address'}[j&&j.error]||'Failed')+'</p>';
+        if (j && typeof j.balance === 'number') { G.balance = j.balance; SAVE.balance = j.balance; updateBalance(true); }
+      }
+    } catch (e) { out.innerHTML = '<p class="rm-warn">Network error.</p>'; }
+  }
+
+  /* ---------- UI chips ---------- */
+  function updateChips() {
+    const bal = document.getElementById('balance');
+    const container = bal ? bal.closest('.bal') : null;
+    if (!container) return;
+    // Replace the "+" free-coins button with a Wallet button when enabled.
+    let btn = container.querySelector('.rm-wallet-btn');
+    const freeBtn = container.querySelector('#freeBtn');
+    if (enabled) {
+      if (!btn) {
+        btn = document.createElement('button');
+        btn.className = 'add rm-wallet-btn';
+        btn.title = user ? 'Wallet' : 'Sign in / Wallet';
+        btn.textContent = user ? '👛' : '🔐';
+        btn.onclick = (e) => { e.preventDefault(); openWallet(); };
+        container.appendChild(btn);
+        if (freeBtn) freeBtn.style.display = 'none';
+      }
+      btn.textContent = user ? '👛' : '🔐';
+      btn.title = user ? 'Wallet — deposit/withdraw' : 'Sign in / Wallet';
+    }
+    // Real-mode visual cue
+    bal.style.color = mode === 'real' ? 'var(--green, #3df0a0)' : '';
+  }
+
+  async function init() {
+    // Fetch public config from the server (built from Vercel env vars). This is
+    // what makes `git push` enable real-money mode with zero manual edits — the
+    // anon key is public by design; RLS enforces data security.
+    if (!enabled) {
+      try {
+        const r = await fetch('/api/config');
+        const j = await r.json();
+        if (j && j.enabled) { SB_URL = j.supabaseUrl; SB_KEY = j.supabaseAnonKey; enabled = true; }
+      } catch (e) { /* local dev or unconfigured — stay virtual */ }
+    }
+    if (!enabled) return; // silent: stays virtual-coin
+    loadSbClient();
+    // wait for supabase client to finish loading
+    const ready = await new Promise(res => { const t0=Date.now(); (function w(){ if(sb||Date.now()-t0>5000) res(!!sb); else setTimeout(w,50); })(); });
+    if (!ready) return;
+    await refreshUser();
+    // Poll balance in real mode so deposits land in the UI.
+    setInterval(() => { if (mode === 'real' && user) syncBalance(); }, 15000);
+  }
+
+  return {
+    init, bindBet, applyServerWin, syncBalance,
+    get mode() { return mode; },
+    get enabled() { return enabled; },
+    get user() { return user; },
+  };
+})();
 </script>
 </body>
 </html>
