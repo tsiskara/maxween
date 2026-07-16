@@ -778,176 +778,305 @@ const skinById=id=>SKINS.find(s=>s.id===id)||SKINS[0];
 /* Industry-grade juicy audio: layered adaptive BGM that morphs with game phase
    + intensity-scaled SFX, pitch-stacking combos, side-chain ducking, and a
    master bus with soft compression. Zero assets - fully synthesized. */
-const A=(()=>{
-  let ac=null,muted=false,vol=0.7,flightOsc=null,flightGain=null;
-  let mVol=0.45,mOn=true;                 // music volume / enabled
-  let master=null, comp=null, musicBus=null, duckGain=null;
-  // ---- Music scheduler state ----
-  let schedTimer=null, beat16=0, bpm=100, nextBeatAt=0;
-  let layer='menu', intensity=0;          // layer: menu|bet|fly|crash
-  let padOscs=[], padGain=null;
-  const ST={ aMinor:[220.00,261.63,329.63,440.00], eMinor:[164.81,196.00,246.94,329.63] };
-  let padSet=ST.aMinor;
-  const NOTE=(n)=>440*Math.pow(2,(n-69)/12);
-
-	function c(){ if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); buildBus(); }catch(e){} } if(ac&&ac.state==='suspended') try{ ac.resume(); }catch(e){} return ac; }
-
-  function buildBus(){
-    if(master)return;
-    master=ac.createGain(); master.gain.value=0.9;
-    comp=ac.createDynamicsCompressor();
-    comp.threshold.value=-16; comp.knee.value=24; comp.ratio.value=4; comp.attack.value=.003; comp.release.value=.18;
-    master.connect(comp).connect(ac.destination);
-    duckGain=ac.createGain(); duckGain.gain.value=1.0;
-    musicBus=ac.createGain(); musicBus.gain.value=mOn?mVol:0;
-    musicBus.connect(duckGain).connect(master);
-  }
-
-  /* ---------- Low-level primitives ---------- */
-  function tone(f,d,t='sine',v=0.15,s=0){
-    if(muted||vol<=0)return; const x=c(); if(!x)return;
-    const o=x.createOscillator(),g=x.createGain();
-    o.type=t; o.frequency.setValueAtTime(f,x.currentTime);
-    if(s)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+s),x.currentTime+d);
-    g.gain.setValueAtTime(.0001,x.currentTime);
-    g.gain.exponentialRampToValueAtTime(v*vol,x.currentTime+.01);
-    g.gain.exponentialRampToValueAtTime(.0001,x.currentTime+d);
-    o.connect(g).connect(master); o.start(); o.stop(x.currentTime+d+.02);
-    duck();
-  }
-  function noise(d,v=0.2,filt=800){
-    if(muted||vol<=0)return; const x=c(); if(!x)return;
-    const n=x.createBuffer(1,x.sampleRate*d,x.sampleRate); const dat=n.getChannelData(0);
-    for(let i=0;i<dat.length;i++) dat[i]=(Math.random()*2-1)*Math.pow(1-i/dat.length,1.5);
-    const s=x.createBufferSource(); s.buffer=n; const bp=x.createBiquadFilter(); bp.type='lowpass'; bp.frequency.value=filt;
-    const g=x.createGain(); g.gain.value=v*vol; s.connect(bp).connect(g).connect(master); s.start();
-    duck();
-  }
-  /* Side-chain-style duck: music dips briefly when SFX hits (keeps mix clean) */
-  function duck(){
-    const x=ac; if(!x||!duckGain)return;
-    try{
-      duckGain.gain.cancelScheduledValues(x.currentTime);
-      duckGain.gain.setValueAtTime(duckGain.gain.value,x.currentTime);
-      duckGain.gain.linearRampToValueAtTime(0.45,x.currentTime+.02);
-      duckGain.gain.linearRampToValueAtTime(1.0,x.currentTime+.22);
-    }catch(e){}
-  }
-
-  /* ============================================================
-     ADAPTIVE MUSIC ENGINE - 16th-note scheduler drives bass, arp,
-     pluck & drums. Pad chord holds under it for "synthwave casino"
-     vibe. Layer morphs the pattern live (no restarts/glitches).
-     ============================================================ */
-  const PATTERNS={
-    menu: { bpm:92,  drums:false, bass:[0,0,0,0, 7,0,0,0, 5,0,0,0, 3,0,0,0], arp:[0,7,12,7, 5,7,12,7, 3,10,12,10, 5,7,12,15], pluck:[] },
-    bet:  { bpm:108, drums:true,  bass:[0,0,0,7, 0,0,0,0, -2,0,0,5, -2,0,0,0], arp:[0,12,7,12, 5,12,7,12, 3,10,5,10, 7,12,15,12], pluck:[7,0,12,0, 7,0,12,0, 5,0,10,0, 5,0,12,0] },
-    fly:  { bpm:128, drums:true,  bass:[0,0,7,0, 0,7,0,12, 0,0,5,0, 0,5,12,15], arp:[0,12,15,19, 12,19,24,19, 7,12,15,19, 12,19,24,28], pluck:[0,7,12,19, 0,7,12,19, 5,12,15,22, 5,12,15,22] },
-  };
-  function setLayer(name){ if(layer===name&&name!=='fly')return; layer=name; const p=PATTERNS[name]||PATTERNS.menu; bpm=p.bpm; ensurePad(); ensureSched(); }
-
-  function ensurePad(){
-    const x=c(); if(!x||padOscs.length)return;
-    padGain=x.createGain(); padGain.gain.value=0; padGain.connect(musicBus);
-    const f=x.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900; f.Q.value=0.6;
-    padOscs=padSet.map((fr,i)=>{
-      const o=x.createOscillator(),g=x.createGain(); o.type='sawtooth';
-      o.frequency.value=fr; o.detune.value=(i-1.5)*6; g.gain.value=0.08/padSet.length;
-      o.connect(g).connect(f).connect(padGain); o.start(); return {o,g};
-    });
-    padGain.gain.linearRampToValueAtTime(0.18,x.currentTime+2.0);
-  }
-  function stopPad(){ if(padOscs.length&&ac){ try{padGain.gain.linearRampToValueAtTime(.0001,ac.currentTime+.6);}catch(e){} const arr=padOscs.slice(); padOscs=[]; setTimeout(()=>arr.forEach(p=>{try{p.o.stop();}catch(e){}}),700);} }
-
-  function ensureSched(){
-    if(schedTimer)return;
-    const x=c(); if(!x)return;
-    nextBeatAt=x.currentTime+.05; beat16=0;
-    const tick=()=>{
-      if(!ac){ schedTimer=null; return; }
-      const p=PATTERNS[layer]||PATTERNS.menu;
-      const spb=60/bpm, sp16=spb/4;
-      while(ac.currentTime+sp16 > nextBeatAt){
-        scheduleBeat(beat16,p,nextBeatAt);
-        beat16=(beat16+1)%16; nextBeatAt+=sp16;
-      }
-      schedTimer=setTimeout(tick,30);
-    };
-    tick();
-  }
-  function stopSched(){ if(schedTimer){clearTimeout(schedTimer); schedTimer=null;} }
-
-  function scheduleBeat(step,p,t){
-    if(!musicBus||muted||!mOn)return;
-    if(p.bass[step]){ const n=p.bass[step], fr=NOTE(45+n); pluck(fr,t,.18,'sawtooth',0.10,true); }
-    if(p.arp[step]){  const fr=NOTE(60+p.arp[step]); pluck(fr,t,.14,'triangle',0.05,true); }
-    if(p.pluck[step]){ const fr=NOTE(72+p.pluck[step]); pluck(fr,t,.10,'square',0.028,true); }
-    if(p.drums){
-      if(step%4===0) kick(t);
-      if(step%8===4) snare(t);
-      if(step%2===0) hat(t, step%4===0?0.5:0.28);
-      if(layer==='fly' && (step===6||step===14)) hat(t,0.7,true);
-    }
-    if(step===0 && layer==='bet') setPadChord(ST.eMinor);
-    if(step===0 && layer==='menu') setPadChord(ST.aMinor);
-  }
-  function pluck(fr,t,d,type,v,isMusic){
-    const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
-    o.type=type; o.frequency.value=fr; f.type='lowpass'; f.frequency.setValueAtTime(fr*4,t); f.frequency.exponentialRampToValueAtTime(fr*1.2,t+d);
-    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(v,t+.008); g.gain.exponentialRampToValueAtTime(.0001,t+d);
-    o.connect(f).connect(g).connect(isMusic?musicBus:master); o.start(t); o.stop(t+d+.02);
-  }
-  function kick(t){ const o=ac.createOscillator(),g=ac.createGain(); o.type='sine'; o.frequency.setValueAtTime(130,t); o.frequency.exponentialRampToValueAtTime(45,t+.12); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.22,t+.005); g.gain.exponentialRampToValueAtTime(.0001,t+.22); o.connect(g).connect(musicBus); o.start(t); o.stop(t+.25); }
-  function snare(t){ const d=ac.sampleRate*.18, buf=ac.createBuffer(1,d,ac.sampleRate); const dat=buf.getChannelData(0); for(let i=0;i<d;i++)dat[i]=(Math.random()*2-1)*Math.pow(1-i/d,2); const s=ac.createBufferSource(); s.buffer=buf; const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=1500; const g=ac.createGain(); g.gain.value=.10; s.connect(f).connect(g).connect(musicBus); s.start(t); }
-  function hat(t,v,open){ const d=open?ac.sampleRate*.12:ac.sampleRate*.04, buf=ac.createBuffer(1,d,ac.sampleRate); const dat=buf.getChannelData(0); for(let i=0;i<d;i++)dat[i]=(Math.random()*2-1)*Math.pow(1-i/d,1.5); const s=ac.createBufferSource(); s.buffer=buf; const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000; const g=ac.createGain(); g.gain.value=v*.05; s.connect(f).connect(g).connect(musicBus); s.start(t); }
-  function setPadChord(chord){ if(!ac||!padGain)return; const t=ac.currentTime; padSet=chord; if(padOscs.length!==chord.length){ stopPad(); ensurePad(); return; } chord.forEach((fr,i)=>{ try{ padOscs[i].o.frequency.linearRampToValueAtTime(fr,t+.4); }catch(e){} }); }
-
-  /* ---------- Stingers ---------- */
-  function stingerDown(){ if(muted||!mOn||!ac)return; [0,3,7,12].forEach((n,i)=>{ const fr=NOTE(48+n); const o=ac.createOscillator(),g=ac.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(fr,ac.currentTime); o.frequency.exponentialRampToValueAtTime(fr*0.5,ac.currentTime+.8); g.gain.setValueAtTime(.0001,ac.currentTime); g.gain.exponentialRampToValueAtTime(.06,ac.currentTime+.05); g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+.8); o.connect(g).connect(musicBus); o.start(); o.stop(ac.currentTime+.85); }); }
-  function stingerUp(){ if(muted||!mOn||!ac)return; [0,7,12,19].forEach((n,i)=>{ setTimeout(()=>{ const fr=NOTE(60+n); pluck(fr,ac.currentTime,.4,'triangle',.12,true); },i*70); }); }
-  function stingerCrash(){ if(muted||!mOn||!ac)return; const o=ac.createOscillator(),g=ac.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(NOTE(40),ac.currentTime); o.frequency.exponentialRampToValueAtTime(NOTE(25),ac.currentTime+.9); g.gain.setValueAtTime(.0001,ac.currentTime); g.gain.exponentialRampToValueAtTime(.10,ac.currentTime+.03); g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+.9); o.connect(g).connect(musicBus); o.start(); o.stop(ac.currentTime+1.0); }
-
-  return {
-    setMute(m){ muted=m; if(muted){ this.stopFlight(); } // ponytail: mute must kill the music pad too, not just new SFX — label says "all audio"
-      if(ac&&musicBus){ try{ musicBus.gain.cancelScheduledValues(ac.currentTime); musicBus.gain.linearRampToValueAtTime(0,ac.currentTime+.08); }catch(e){} }
-      if(!m&&mOn&&ac&&musicBus){ try{ musicBus.gain.linearRampToValueAtTime(mVol,ac.currentTime+.2); }catch(e){} } },
-    setVol(v){ vol=v; },
-    setMusicOn(on){ mOn=on; if(ac&&musicBus){ try{musicBus.gain.linearRampToValueAtTime(on?mVol:0,ac.currentTime+.3);}catch(e){} } if(on){ setLayer(layer==='crash'?'bet':(layer==='menu'?'menu':layer)); } else { stopSched(); stopPad(); } },
-    setMusicVol(v){ mVol=v; if(ac&&musicBus&&mOn){ try{musicBus.gain.linearRampToValueAtTime(v,ac.currentTime+.2);}catch(e){} } },
-    musicMenu(){ setLayer('menu'); },
-    musicBet(){ setLayer('bet'); stingerDown(); },
-    musicFly(){ setLayer('fly'); stingerUp(); },
-    musicCrash(){ layer='crash'; stingerCrash(); setLayer('bet'); },
-    tick(){ tone(900,.03,'square',.05); },
-    bet(){ tone(440,.06,'square',.1); setTimeout(()=>tone(660,.06,'square',.08),40); },
-    cashout(m){ const t=m>=10?3:m>=5?2:m>=2?1:0; const st=Math.pow(1.0595,t); [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f*st,.1,'triangle',.14),i*65)); },
-    jackpot(){ [523,659,784,1046,1318,1568,2093].forEach((f,i)=>setTimeout(()=>tone(f,.12,'triangle',.15),i*70)); setTimeout(()=>{tone(1046,.5,'triangle',.1);tone(1318,.5,'sine',.08);tone(2093,.5,'sine',.06);},520); },
-    milestone(tier){ const f=520+tier*140; tone(f,.06,'triangle',.1); setTimeout(()=>tone(f*1.5,.09,'triangle',.1),55); },
-    nearMiss(){ tone(620,.22,'sawtooth',.1,-240); },
-    doubleCash(){ [523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>{tone(f,.1,'triangle',.14);tone(f*1.5,.07,'sine',.07);},i*55)); },
-    coin(){ tone(1200,.04,'square',.08); setTimeout(()=>tone(1600,.04,'square',.06),40); },
-    coinCascade(n){ const c=Math.min(n||8,16); for(let i=0;i<c;i++) setTimeout(()=>{ tone(900+i*60,.05,'square',.07); setTimeout(()=>tone(1400+i*80,.04,'square',.05),25); }, i*55); },
-    startFlight(){ if(muted||vol<=0)return; const x=c(); if(!x)return;
-      try{ flightOsc=x.createOscillator(); flightGain=x.createGain(); flightOsc.type='sawtooth'; flightOsc.frequency.setValueAtTime(110,x.currentTime);
-      const f=x.createBiquadFilter(); f.type='lowpass'; f.frequency.value=700;
-      flightGain.gain.setValueAtTime(.0001,x.currentTime); flightGain.gain.exponentialRampToValueAtTime(.04*vol,x.currentTime+.4);
-      flightOsc.connect(f).connect(flightGain).connect(master); flightOsc.start(); }catch(e){} },
-    updateFlight(m){ if(muted||!flightOsc||!ac)return; try{ flightOsc.frequency.setTargetAtTime(110+Math.min(600,m*40),ac.currentTime,.1); flightGain.gain.setTargetAtTime(Math.min(.06*vol,.02+m*.005),ac.currentTime,.2); }catch(e){} },
-    stopFlight(){ if(flightOsc&&ac){ try{flightGain.gain.setTargetAtTime(.0001,ac.currentTime,.1); flightOsc.stop(ac.currentTime+.3);}catch(e){} flightOsc=null; flightGain=null; } },
-    crash(){ noise(.7,.4,500); tone(90,.5,'sawtooth',.18,-50); setTimeout(()=>tone(60,.4,'sawtooth',.14,-30),80); },
-    launch(){ tone(220,.3,'sawtooth',.14,200); noise(.4,.2,1200); },
-    ach(){ tone(659,.1,'triangle',.14); setTimeout(()=>tone(880,.1,'triangle',.14),80); setTimeout(()=>tone(1046,.2,'triangle',.14),160); },
-    swell(i){ tone(220+i*40,.5,'sine',.06,120); },
-    whoosh(){ noise(.3,.15,700); },
-    levelUp(){ [523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>tone(f,.12,'triangle',.16),i*70)); setTimeout(()=>{tone(1046,.4,'sine',.1);tone(1568,.4,'sine',.08);},420); },
-    lbxOpen(rarity){ const base=rarity==='legendary'?880:rarity==='epic'?660:rarity==='rare'?523:440; [base,base*1.25,base*1.5].forEach((f,i)=>setTimeout(()=>tone(f,.14,'triangle',.15),i*90)); if(rarity==='legendary')setTimeout(()=>tone(base*2,.5,'sine',.12),300); },
-		    comboTick(n){ tone(600+Math.min(n,12)*60,.06,'square',.1); },
-		    count(){ tone(660,.04,'square',.06); },
-		    /* ponytail: launch countdown — descending 3-2-1 beeps that build tension.
-		       Emulates real rocket countdown audio. Silent at competitors. */
-		    countdown(s){ if(s<1||s>3)return; const f=600-(3-s)*120; tone(f,.08,'square',.12); haptic(10); },
-		    /* ponytail: iOS Safari suspends AudioContext until a user gesture calls resume() */
-		    resume(){ const x=ac; if(x && x.state==='suspended') try{ x.resume(); }catch(e){} },
+	const A=(()=>{
+	  let ac=null,muted=false,vol=0.7,flightOsc=null,flightGain=null;
+	  let mVol=0.45,mOn=true;                 // music volume / enabled
+	  let master=null, comp=null, musicBus=null, duckGain=null;
+	  // ---- Music scheduler state ----
+	  let schedTimer=null, beat16=0, bpm=100, nextBeatAt=0;
+	  let layer='menu', intensity=0;          // layer: menu|bet|fly|crash
+	  let padOscs=[], padGain=null, padLP=null;
+	  // ponytail: sidechain gain — kick ducks the pad for the pumping house feel
+	  let kickDuckGain=null;
+	  // ponytail: riser for crash approach (auditory looming)
+	  let riserNode=null, riserGain=null, riserActive=false;
+	  // ponytail: key modulation — fly layer shifts +1 semitone at 10x multiplier
+	  let modShift=0, lastMultTier=0;
+	  // ponytail: crash reverb tail state
+	  let crashTailNodes=null;
+	  // ponytail: string layer for high multipliers (10x+)
+	  let stringOscs=[], stringGain=null;
+	  const ST={ aMinor:[220.00,261.63,329.63,440.00], eMinor:[164.81,196.00,246.94,329.63] };
+	  // ponytail: Am pentatonic melodic hook for fly — roots on A3 (220), C4, D4, E4, G4
+	  const HOOK=[0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0]; // per 16th step, semitone offset from A4 (MIDI 69)
+	  // A minor pentatonic hook: A-C-D-E-G-A — memorable 1-bar phrase, repeated
+	  const PENTA=[0,3,5,7,10,12]; // semitones from root
+	  let padSet=ST.aMinor;
+	  const NOTE=(n)=>440*Math.pow(2,(n-69)/12);
+	
+		function c(){ if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); buildBus(); }catch(e){} } if(ac&&ac.state==='suspended') try{ ac.resume(); }catch(e){} return ac; }
+	
+	  function buildBus(){
+	    if(master)return;
+	    master=ac.createGain(); master.gain.value=0.9;
+	    comp=ac.createDynamicsCompressor();
+	    comp.threshold.value=-16; comp.knee.value=24; comp.ratio.value=4; comp.attack.value=.003; comp.release.value=.18;
+	    master.connect(comp).connect(ac.destination);
+	    duckGain=ac.createGain(); duckGain.gain.value=1.0;
+	    musicBus=ac.createGain(); musicBus.gain.value=mOn?mVol:0;
+	    musicBus.connect(duckGain).connect(master);
+	    // ponytail: kickDuckGain sits between pad → musicBus. Kick fires a duck envelope on it.
+	    kickDuckGain=ac.createGain(); kickDuckGain.gain.value=1.0;
+	  }
+	
+	  /* ---------- Low-level primitives ---------- */
+	  function tone(f,d,t='sine',v=0.15,s=0){
+	    if(muted||vol<=0)return; const x=c(); if(!x)return;
+	    const o=x.createOscillator(),g=x.createGain();
+	    o.type=t; o.frequency.setValueAtTime(f,x.currentTime);
+	    if(s)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+s),x.currentTime+d);
+	    g.gain.setValueAtTime(.0001,x.currentTime);
+	    g.gain.exponentialRampToValueAtTime(v*vol,x.currentTime+.01);
+	    g.gain.exponentialRampToValueAtTime(.0001,x.currentTime+d);
+	    o.connect(g).connect(master); o.start(); o.stop(x.currentTime+d+.02);
+	    duck();
+	  }
+	  function noise(d,v=0.2,filt=800){
+	    if(muted||vol<=0)return; const x=c(); if(!x)return;
+	    const n=x.createBuffer(1,x.sampleRate*d,x.sampleRate); const dat=n.getChannelData(0);
+	    for(let i=0;i<dat.length;i++) dat[i]=(Math.random()*2-1)*Math.pow(1-i/dat.length,1.5);
+	    const s=x.createBufferSource(); s.buffer=n; const bp=x.createBiquadFilter(); bp.type='lowpass'; bp.frequency.value=filt;
+	    const g=x.createGain(); g.gain.value=v*vol; s.connect(bp).connect(g).connect(master); s.start();
+	    duck();
+	  }
+	  /* Side-chain-style duck: music dips briefly when SFX hits (keeps mix clean) */
+	  function duck(){
+	    const x=ac; if(!x||!duckGain)return;
+	    try{
+	      duckGain.gain.cancelScheduledValues(x.currentTime);
+	      duckGain.gain.setValueAtTime(duckGain.gain.value,x.currentTime);
+	      duckGain.gain.linearRampToValueAtTime(0.45,x.currentTime+.02);
+	      duckGain.gain.linearRampToValueAtTime(1.0,x.currentTime+.22);
+	    }catch(e){}
+	  }
+	
+	  /* ============================================================
+	     ADAPTIVE MUSIC ENGINE - 16th-note scheduler drives bass, arp,
+	     pluck & drums. Pad chord holds under it for "synthwave casino"
+	     vibe. Layer morphs the pattern live (no restarts/glitches).
+	     ============================================================ */
+	  const PATTERNS={
+	    menu: { bpm:92,  drums:false, bass:[0,0,0,0, 7,0,0,0, 5,0,0,0, 3,0,0,0], arp:[0,7,12,7, 5,7,12,7, 3,10,12,10, 5,7,12,15], pluck:[] },
+	    bet:  { bpm:108, drums:true,  bass:[0,0,0,7, 0,0,0,0, -2,0,0,5, -2,0,0,0], arp:[0,12,7,12, 5,12,7,12, 3,10,5,10, 7,12,15,12], pluck:[7,0,12,0, 7,0,12,0, 5,0,10,0, 5,0,12,0] },
+	    fly:  { bpm:128, drums:true,  bass:[0,0,7,0, 0,7,0,12, 0,0,5,0, 0,5,12,15], arp:[0,12,15,19, 12,19,24,19, 7,12,15,19, 12,19,24,28], pluck:[0,7,12,19, 0,7,12,19, 5,12,15,22, 5,12,15,22] },
+	  };
+	  // ponytail: pentatonic hook pattern — 2-bar A minor pentatonic melody
+	  // Bar 1: A3→C4→D4→E4   Bar 2: E4→G4→A4→G4   (8th notes)
+	  const HOOK_FLY=[0,0,12,15, 17,19,0,0, 19,22,24,22, 19,17,15,17];
+	  function setLayer(name){ if(layer===name&&name!=='fly')return; layer=name; const p=PATTERNS[name]||PATTERNS.menu; bpm=p.bpm; ensurePad(); ensureSched(); }
+	
+	  function ensurePad(){
+	    const x=c(); if(!x||padOscs.length)return;
+	    if(!kickDuckGain)return;
+	    padGain=x.createGain(); padGain.gain.value=0;
+	    // ponytail: pad → kickDuckGain (sidechain) → musicBus for the pumping house feel
+	    padGain.connect(kickDuckGain); kickDuckGain.connect(musicBus);
+	    padLP=x.createBiquadFilter(); padLP.type='lowpass'; padLP.frequency.value=900; padLP.Q.value=0.6;
+	    // ponytail: string layer — extra sawtooth octave-up for high-mult euphoria
+	    const makePad=(fr,i,det)=>{
+	      const o=x.createOscillator(),g=x.createGain(); o.type='sawtooth';
+	      o.frequency.value=fr; o.detune.value=det; g.gain.value=0.08/padSet.length;
+	      o.connect(g).connect(padLP).connect(padGain); o.start(); return {o,g};
+	    };
+	    padOscs=padSet.map((fr,i)=>makePad(fr,i,(i-1.5)*6));
+	    padGain.gain.linearRampToValueAtTime(0.18,x.currentTime+2.0);
+	    // ponytail: string layer (high mult euphoria) — starts silent, faded in via updateRiser
+	    if(!stringGain){
+	      stringGain=ac.createGain(); stringGain.gain.value=0; stringGain.connect(musicBus);
+	      const sf=ac.createBiquadFilter(); sf.type='lowpass'; sf.frequency.value=1200; sf.Q.value=0.3;
+	      stringOscs=padSet.map((fr,i)=>{
+	        const o=ac.createOscillator(),g=ac.createGain(); o.type='sawtooth';
+	        o.frequency.value=fr*2; o.detune.value=(i-1.5)*3; g.gain.value=0.04/padSet.length;
+	        o.connect(g).connect(sf).connect(stringGain); o.start(); return {o,g};
+	      });
+	    }
+	  }
+	  function stopPad(){ if(padOscs.length&&ac){ try{padGain.gain.linearRampToValueAtTime(.0001,ac.currentTime+.6);}catch(e){} const arr=padOscs.slice(); padOscs=[]; setTimeout(()=>arr.forEach(p=>{try{p.o.stop();}catch(e){}}),700);}
+	    if(stringGain&&ac){ try{stringGain.gain.linearRampToValueAtTime(0,ac.currentTime+.3);}catch(e){} }
+	  }
+	
+	  function ensureSched(){
+	    if(schedTimer)return;
+	    const x=c(); if(!x)return;
+	    nextBeatAt=x.currentTime+.05; beat16=0;
+	    const tick=()=>{
+	      if(!ac){ schedTimer=null; return; }
+	      const p=PATTERNS[layer]||PATTERNS.menu;
+	      const spb=60/bpm, sp16=spb/4;
+	      while(ac.currentTime+sp16 > nextBeatAt){
+	        scheduleBeat(beat16,p,nextBeatAt);
+	        beat16=(beat16+1)%16; nextBeatAt+=sp16;
+	      }
+	      schedTimer=setTimeout(tick,30);
+	    };
+	    tick();
+	  }
+	  function stopSched(){ if(schedTimer){clearTimeout(schedTimer); schedTimer=null;} }
+	
+	  // ponytail: sidechain duck on pad — called by kick to create the pumping house feel
+	  function kickDuck(t){
+	    if(!ac||!kickDuckGain)return;
+	    try{
+	      kickDuckGain.gain.cancelScheduledValues(t);
+	      kickDuckGain.gain.setValueAtTime(kickDuckGain.gain.value,t);
+	      kickDuckGain.gain.linearRampToValueAtTime(0.15,t+.008); // fast dip
+	      kickDuckGain.gain.linearRampToValueAtTime(0.55,t+.03);  // partial recovery
+	      kickDuckGain.gain.linearRampToValueAtTime(1.0,t+.14);   // full recovery by next kick
+	    }catch(e){}
+	  }
+	
+	  function scheduleBeat(step,p,t){
+	    if(!musicBus||muted||!mOn)return;
+	    if(p.bass[step]){ const n=p.bass[step], fr=NOTE(45+n+modShift); pluck(fr,t,.18,'sawtooth',0.10,true); }
+	    if(p.arp[step]){  const fr=NOTE(60+p.arp[step]+modShift); pluck(fr,t,.14,'triangle',0.05,true); }
+	    if(p.pluck[step]){ const fr=NOTE(72+p.pluck[step]+modShift); pluck(fr,t,.10,'square',0.028,true); }
+	    // ponytail: pentatonic hook plays during fly — one melodic phrase per bar
+	    if(layer==='fly' && HOOK_FLY[step]){ const fr=NOTE(69+HOOK_FLY[step]+modShift); pluck(fr,t,.22,'triangle',0.075,true); }
+	    if(p.drums){
+	      if(step%4===0){ kick(t); kickDuck(t); } // ponytail: kick triggers sidechain duck every quarter
+	      if(step%8===4) snare(t);
+	      if(step%2===0) hat(t, step%4===0?0.5:0.28);
+	      if(layer==='fly' && (step===6||step===14)) hat(t,0.7,true);
+	      // ponytail: clap on beat 3 of bar 2 during win streak (3+)
+	      if(layer==='fly' && step===12 && SAVE.winStreak>=3){
+	        noise(0.06,0.12,2000); // clap via filtered noise burst
+	      }
+	    }
+	    if(step===0 && layer==='bet') setPadChord(ST.eMinor);
+	    if(step===0 && layer==='menu') setPadChord(ST.aMinor);
+	  }
+	  function pluck(fr,t,d,type,v,isMusic){
+	    const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
+	    o.type=type; o.frequency.value=fr; f.type='lowpass'; f.frequency.setValueAtTime(fr*4,t); f.frequency.exponentialRampToValueAtTime(fr*1.2,t+d);
+	    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(v,t+.008); g.gain.exponentialRampToValueAtTime(.0001,t+d);
+	    o.connect(f).connect(g).connect(isMusic?musicBus:master); o.start(t); o.stop(t+d+.02);
+	  }
+	  // ponytail: kick tuned to A1 (55Hz) — sub-octave of the Am key root. Matches bass fundamental.
+	  function kick(t){ const o=ac.createOscillator(),g=ac.createGain(); o.type='sine'; o.frequency.setValueAtTime(55,t); o.frequency.exponentialRampToValueAtTime(45,t+.12); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.22,t+.005); g.gain.exponentialRampToValueAtTime(.0001,t+.22); o.connect(g).connect(musicBus); o.start(t); o.stop(t+.25); }
+	  function snare(t){ const d=ac.sampleRate*.18, buf=ac.createBuffer(1,d,ac.sampleRate); const dat=buf.getChannelData(0); for(let i=0;i<d;i++)dat[i]=(Math.random()*2-1)*Math.pow(1-i/d,2); const s=ac.createBufferSource(); s.buffer=buf; const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=1500; const g=ac.createGain(); g.gain.value=.10; s.connect(f).connect(g).connect(musicBus); s.start(t); }
+	  function hat(t,v,open){ const d=open?ac.sampleRate*.12:ac.sampleRate*.04, buf=ac.createBuffer(1,d,ac.sampleRate); const dat=buf.getChannelData(0); for(let i=0;i<d;i++)dat[i]=(Math.random()*2-1)*Math.pow(1-i/d,1.5); const s=ac.createBufferSource(); s.buffer=buf; const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000; const g=ac.createGain(); g.gain.value=v*.05; s.connect(f).connect(g).connect(musicBus); s.start(t); }
+	  function setPadChord(chord){ if(!ac||!padGain)return; const t=ac.currentTime; padSet=chord; if(padOscs.length!==chord.length){ stopPad(); ensurePad(); return; } chord.forEach((fr,i)=>{ try{ padOscs[i].o.frequency.linearRampToValueAtTime(fr+modShift*100,t+.4); }catch(e){} }); }
+	
+	  /* ---------- Stingers ---------- */
+	  function stingerDown(){ if(muted||!mOn||!ac)return; [0,3,7,12].forEach((n,i)=>{ const fr=NOTE(48+n); const o=ac.createOscillator(),g=ac.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(fr,ac.currentTime); o.frequency.exponentialRampToValueAtTime(fr*0.5,ac.currentTime+.8); g.gain.setValueAtTime(.0001,ac.currentTime); g.gain.exponentialRampToValueAtTime(.06,ac.currentTime+.05); g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+.8); o.connect(g).connect(musicBus); o.start(); o.stop(ac.currentTime+.85); }); }
+	  function stingerUp(){ if(muted||!mOn||!ac)return; [0,7,12,19].forEach((n,i)=>{ setTimeout(()=>{ const fr=NOTE(60+n); pluck(fr,ac.currentTime,.4,'triangle',.12,true); },i*70); }); }
+	  function stingerCrash(){ if(muted||!mOn||!ac)return; const o=ac.createOscillator(),g=ac.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(NOTE(40),ac.currentTime); o.frequency.exponentialRampToValueAtTime(NOTE(25),ac.currentTime+.9); g.gain.setValueAtTime(.0001,ac.currentTime); g.gain.exponentialRampToValueAtTime(.10,ac.currentTime+.03); g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+.9); o.connect(g).connect(musicBus); o.start(); o.stop(ac.currentTime+1.0); }
+	
+	  // ponytail: start crash-approach riser — filtered noise that sweeps up in pitch
+	  function startRiser(){
+	    if(!ac||riserActive||muted)return; riserActive=true;
+	    try{
+	      const x=ac; riserGain=x.createGain(); riserGain.gain.setValueAtTime(.0001,x.currentTime);
+	      riserGain.connect(musicBus);
+	      riserNode=x.createOscillator(); riserNode.type='sawtooth';
+	      riserNode.frequency.setValueAtTime(80,x.currentTime);
+	      riserNode.frequency.exponentialRampToValueAtTime(1600,x.currentTime+1.2);
+	      const rf=x.createBiquadFilter(); rf.type='bandpass'; rf.frequency.value=400; rf.Q.value=0.5;
+	      rf.frequency.linearRampToValueAtTime(3000,x.currentTime+1.2);
+	      riserGain.gain.linearRampToValueAtTime(0.07,x.currentTime+0.9);
+	      riserGain.gain.linearRampToValueAtTime(.0001,x.currentTime+1.3);
+	      riserNode.connect(rf).connect(riserGain); riserNode.start(x.currentTime);
+	      riserNode.stop(x.currentTime+1.4);
+	      // white noise riser layer
+	      const rd=0.8, buf=ac.createBuffer(1,ac.sampleRate*rd,ac.sampleRate), dat=buf.getChannelData(0);
+	      for(let i=0;i<dat.length;i++)dat[i]=(Math.random()*2-1)*Math.pow(1-i/dat.length,3);
+	      const ns=ac.createBufferSource(); ns.buffer=buf;
+	      const nf=ac.createBiquadFilter(); nf.type='lowpass'; nf.frequency.setValueAtTime(200,ac.currentTime);
+	      nf.frequency.exponentialRampToValueAtTime(4000,ac.currentTime+.9);
+	      const ng=ac.createGain(); ng.gain.setValueAtTime(.0001,ac.currentTime);
+	      ng.gain.linearRampToValueAtTime(0.08,ac.currentTime+.4);
+	      ng.gain.linearRampToValueAtTime(.0001,ac.currentTime+.9);
+	      ns.connect(nf).connect(ng).connect(musicBus); ns.start(ac.currentTime); ns.stop(ac.currentTime+.95);
+	      setTimeout(()=>{ riserActive=false; riserNode=null; riserGain=null; }, 1400);
+	    }catch(e){ riserActive=false; }
+	  }
+	  function stopRiser(){ if(riserNode&&ac){ try{riserGain.gain.linearRampToValueAtTime(.0001,ac.currentTime+.05);}catch(e){} } riserActive=false; }
+	
+	  // ponytail: crash reverb tail — decaying noise with pitch drop (the "hollow aftermath")
+	  function crashTail(){
+	    if(muted||!mOn||!ac)return; const x=ac;
+	    try{
+	      const t=x.currentTime;
+	      // Low rumble with pitch dive
+	      const o=x.createOscillator(),g=x.createGain(); o.type='sawtooth';
+	      o.frequency.setValueAtTime(NOTE(36),t); o.frequency.exponentialRampToValueAtTime(NOTE(18),t+1.5);
+	      g.gain.setValueAtTime(.0001,t); g.gain.linearRampToValueAtTime(0.12,t+.15);
+	      g.gain.exponentialRampToValueAtTime(.0001,t+1.8);
+	      const rf=x.createBiquadFilter(); rf.type='lowpass'; rf.frequency.value=300;
+	      o.connect(rf).connect(g).connect(musicBus); o.start(t); o.stop(t+2.0);
+	      // Reverb-like noise tail
+	      const rd=0.8, buf=ac.createBuffer(1,ac.sampleRate*rd,ac.sampleRate), dat=buf.getChannelData(0);
+	      for(let i=0;i<dat.length;i++)dat[i]=(Math.random()*2-1)*Math.pow(1-i/dat.length,2.5);
+	      const ns=ac.createBufferSource(); ns.buffer=buf;
+	      const nf=ac.createBiquadFilter(); nf.type='lowpass'; nf.frequency.setValueAtTime(2500,t);
+	      nf.frequency.exponentialRampToValueAtTime(200,t+1.5);
+	      const ng=ac.createGain(); ng.gain.setValueAtTime(.0001,t);
+	      ng.gain.linearRampToValueAtTime(0.15,t+.1); ng.gain.exponentialRampToValueAtTime(.0001,t+1.8);
+	      ns.connect(nf).connect(ng).connect(musicBus); ns.start(t); ns.stop(t+2.0);
+	      crashTailNodes=[o,g,ns,nf,ng];
+	      setTimeout(()=>{ crashTailNodes=null; }, 2000);
+	    }catch(e){}
+	  }
+	
+	  // ponytail: update key modulation + riser + string layer based on multiplier
+	  function updateRiser(mult){
+	    // Key modulation: shift +1 semitone at 10x, +2 at 25x
+	    const tier=mult>=25?2:mult>=10?1:0;
+	    if(tier!==lastMultTier){
+	      lastMultTier=tier;
+	      if(tier===1){ modShift=1; if(ac) try{stringGain.gain.linearRampToValueAtTime(0.08,ac.currentTime+.4);}catch(e){} }
+	      else if(tier===2){ modShift=2; }
+	      else { modShift=0; if(ac) try{stringGain.gain.linearRampToValueAtTime(0,ac.currentTime+.4);}catch(e){} }
+	    }
+	  }
+	
+	  return {
+	    setMute(m){ muted=m; if(muted){ this.stopFlight(); } // ponytail: mute must kill the music pad too, not just new SFX — label says "all audio"
+	      if(ac&&musicBus){ try{ musicBus.gain.cancelScheduledValues(ac.currentTime); musicBus.gain.linearRampToValueAtTime(0,ac.currentTime+.08); }catch(e){} }
+	      if(!m&&mOn&&ac&&musicBus){ try{ musicBus.gain.linearRampToValueAtTime(mVol,ac.currentTime+.2); }catch(e){} } },
+	    setVol(v){ vol=v; },
+	    setMusicOn(on){ mOn=on; if(ac&&musicBus){ try{musicBus.gain.linearRampToValueAtTime(on?mVol:0,ac.currentTime+.3);}catch(e){} } if(on){ setLayer(layer==='crash'?'bet':(layer==='menu'?'menu':layer)); } else { stopSched(); stopPad(); } },
+	    setMusicVol(v){ mVol=v; if(ac&&musicBus&&mOn){ try{musicBus.gain.linearRampToValueAtTime(v,ac.currentTime+.2);}catch(e){} } },
+	    musicMenu(){ setLayer('menu'); },
+	    musicBet(){ setLayer('bet'); stingerDown(); },
+	    musicFly(){ setLayer('fly'); stingerUp(); lastMultTier=0; modShift=0; },
+	    musicCrash(){ layer='crash'; stopRiser(); stingerCrash(); crashTail(); setLayer('bet'); },
+	    tick(){ tone(900,.03,'square',.05); },
+	    bet(){ tone(440,.06,'square',.1); setTimeout(()=>tone(660,.06,'square',.08),40); },
+	    cashout(m){ const t=m>=10?3:m>=5?2:m>=2?1:0; const st=Math.pow(1.0595,t); [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f*st,.1,'triangle',.14),i*65)); },
+	    jackpot(){ [523,659,784,1046,1318,1568,2093].forEach((f,i)=>setTimeout(()=>tone(f,.12,'triangle',.15),i*70)); setTimeout(()=>{tone(1046,.5,'triangle',.1);tone(1318,.5,'sine',.08);tone(2093,.5,'sine',.06);},520); },
+	    // ponytail: 100/100 — milestone buildup sweep: tier 3+ (10x+) triggers filter swoosh + arp burst
+	    milestone(tier){ const f=520+tier*140; tone(f,.06,'triangle',.1); setTimeout(()=>tone(f*1.5,.09,'triangle',.1),55);
+	      if(tier>=3){ noise(.4,.08,Math.min(4000,800*tier)); setTimeout(()=>{tone(f*2,.12,'sine',.08);},120); }
+	      if(tier>=4){ setTimeout(()=>{tone(f*2.5,.18,'triangle',.12);tone(f*3,.14,'sine',.08);},250); } },
+	    // ponytail: near miss — descending minor 2nd (semitone) to trigger regret more intensely
+	    nearMiss(){ tone(620,.18,'sawtooth',.1,-60); setTimeout(()=>tone(580,.22,'sawtooth',.08,-200),60); },
+	    doubleCash(){ [523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>{tone(f,.1,'triangle',.14);tone(f*1.5,.07,'sine',.07);},i*55)); },
+	    coin(){ tone(1200,.04,'square',.08); setTimeout(()=>tone(1600,.04,'square',.06),40); },
+	    coinCascade(n){ const c=Math.min(n||8,16); for(let i=0;i<c;i++) setTimeout(()=>{ tone(900+i*60,.05,'square',.07); setTimeout(()=>tone(1400+i*80,.04,'square',.05),25); }, i*55); },
+	    startFlight(){ if(muted||vol<=0)return; const x=c(); if(!x)return;
+	      try{ flightOsc=x.createOscillator(); flightGain=x.createGain(); flightOsc.type='sawtooth'; flightOsc.frequency.setValueAtTime(110,x.currentTime);
+	      const f=x.createBiquadFilter(); f.type='lowpass'; f.frequency.value=700;
+	      flightGain.gain.setValueAtTime(.0001,x.currentTime); flightGain.gain.exponentialRampToValueAtTime(.04*vol,x.currentTime+.4);
+	      flightOsc.connect(f).connect(flightGain).connect(master); flightOsc.start(); }catch(e){} },
+	    updateFlight(m){ if(muted||!flightOsc||!ac)return; try{ flightOsc.frequency.setTargetAtTime(110+Math.min(600,m*40),ac.currentTime,.1); flightGain.gain.setTargetAtTime(Math.min(.06*vol,.02+m*.005),ac.currentTime,.2); }catch(e){} },
+	    stopFlight(){ if(flightOsc&&ac){ try{flightGain.gain.setTargetAtTime(.0001,ac.currentTime,.1); flightOsc.stop(ac.currentTime+.3);}catch(e){} flightOsc=null; flightGain=null; } },
+	    crash(){ noise(.7,.4,500); tone(90,.5,'sawtooth',.18,-50); setTimeout(()=>tone(60,.4,'sawtooth',.14,-30),80); },
+	    launch(){ tone(220,.3,'sawtooth',.14,200); noise(.4,.2,1200); },
+	    ach(){ tone(659,.1,'triangle',.14); setTimeout(()=>tone(880,.1,'triangle',.14),80); setTimeout(()=>tone(1046,.2,'triangle',.14),160); },
+	    swell(i){ tone(220+i*40,.5,'sine',.06,120); },
+	    whoosh(){ noise(.3,.15,700); },
+	    levelUp(){ [523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>tone(f,.12,'triangle',.16),i*70)); setTimeout(()=>{tone(1046,.4,'sine',.1);tone(1568,.4,'sine',.08);},420); },
+	    lbxOpen(rarity){ const base=rarity==='legendary'?880:rarity==='epic'?660:rarity==='rare'?523:440; [base,base*1.25,base*1.5].forEach((f,i)=>setTimeout(()=>tone(f,.14,'triangle',.15),i*90)); if(rarity==='legendary')setTimeout(()=>tone(base*2,.5,'sine',.12),300); },
+	    comboTick(n){ tone(600+Math.min(n,12)*60,.06,'square',.1); },
+	    count(){ tone(660,.04,'square',.06); },
+	    /* ponytail: launch countdown — descending 3-2-1 beeps that build tension.
+	       Emulates real rocket countdown audio. Silent at competitors. */
+	    countdown(s){ if(s<1||s>3)return; const f=600-(3-s)*120; tone(f,.08,'square',.12); haptic(10); },
+	    /* ponytail: iOS Safari suspends AudioContext until a user gesture calls resume() */
+	    resume(){ const x=ac; if(x && x.state==='suspended') try{ x.resume(); }catch(e){} },
+	    // ponytail: exported for external call from the fly loop — triggers riser when crash is near
+	    startRiser, stopRiser, updateRiser,
 	  };
 })();
 
@@ -979,10 +1108,11 @@ const BODY_FONT=getComputedStyle(document.body).fontFamily||'sans-serif';
 	  bgStars:[], bgNebula:[], bgShooters:[], lastTickMult:1,
 	  roundHash:'', roundHashFull:'',
 	  hitMile:[], lastCashPoint:0,
-	  _lastCountdown:0, _lastBotRender:0, _suspectTime:0, _lastSwell:0, _firstFrame:0
-	};
-// Seal the G object to prevent new properties being injected (tamper resistance)
-Object.seal(G);
+		  _lastCountdown:0, _lastBotRender:0, _suspectTime:0, _lastSwell:0, _firstFrame:0,
+		  _riserTriggered:false
+		};
+	// Seal the G object to prevent new properties being injected (tamper resistance)
+	Object.seal(G);
 
 /* ---------- Missions ---------- */
 function todayStr(){ return new Date().toDateString(); }
@@ -1078,8 +1208,9 @@ window.addEventListener('resize',resize);
 }
 		async function startFlight(){
 		  document.getElementById('gameMain').classList.add('flying');
-		  G.phase=PH.FLY; G.phaseT=0; G.elapsed=0; G.mult=1; G.curve=[{t:0,m:1}]; G.hitMile=[];
-		  G.lastTickMult=1; // ponytail: was never reset → tick SFX + mult pulse stayed silent after any round whose peak exceeded the next round's climb
+			  G.phase=PH.FLY; G.phaseT=0; G.elapsed=0; G.mult=1; G.curve=[{t:0,m:1}]; G.hitMile=[];
+			  G._riserTriggered=false; // ponytail: 100/100 — reset riser for next round
+			  G.lastTickMult=1; // ponytail: was never reset → tick SFX + mult pulse stayed silent after any round whose peak exceeded the next round's climb
 		  const placedThisRound=[]; for(let i=0;i<G.bets.length;i++){const b=G.bets[i];if(b.placed)placedThisRound.push({idx:b.idx,amount:b.amount,autoAt:b.autoAt});}
 	  if(placedThisRound.length){ SAVE.lastBets=placedThisRound; save(); }
 	  // ponytail: wrap crashAt calculation in try-catch so a corrupted/crashing hash
@@ -1397,11 +1528,14 @@ function loop(ts){
 	    const last=plot(G.elapsed,G.mult);
 	    if(!SAVE.settings.reducedMotion && Math.random()<0.7){ const sk=skinById(SAVE.equippedSkin); G.embers.push({x:last.x,y:last.y,vx:-20-Math.random()*30,vy:30+Math.random()*40,life:0.5+Math.random()*.3,age:0,r:1.5+Math.random()*2,col:sk.trail}); }
 	    for(const b of G.bets){ if(b.placed && !b.cashedOut && G.mult>=b.autoAt) doCashOut(b); }
-	    // ponytail: double-check crashAt validity every frame during flight — if it somehow
-	    // got corrupted (e.g. crashFromHash threw and was caught), floor at 1.01 so the round
-	    // ends quickly rather than flying to infinity
-	    if(typeof G.crashAt!=='number'||G.crashAt<1||!isFinite(G.crashAt)) G.crashAt=1.01;
-	    if(G.mult>=G.crashAt){ G.mult=G.crashAt; doCrash(); }
+		    // ponytail: double-check crashAt validity every frame during flight — if it somehow
+		    // got corrupted (e.g. crashFromHash threw and was caught), floor at 1.01 so the round
+		    // ends quickly rather than flying to infinity
+		    if(typeof G.crashAt!=='number'||G.crashAt<1||!isFinite(G.crashAt)) G.crashAt=1.01;
+		    // ponytail: 100/100 — key modulation + riser sweep before crash (auditory looming)
+		    A.updateRiser(G.mult);
+		    if(G.crashAt-G.mult<0.3&&G.crashAt-G.mult>0&&!G._riserTriggered){ G._riserTriggered=true; A.startRiser(); }
+		    if(G.mult>=G.crashAt){ G.mult=G.crashAt; doCrash(); }
 	  } else if(G.phase===PH.CRASH){
 	    G.phaseT+=dt; G.bustScale+=dt;
 	    if(G.phaseT>=CFG.CRASH_PAUSE) startBetting();
