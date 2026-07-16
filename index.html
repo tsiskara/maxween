@@ -587,19 +587,31 @@ function randHex(n){
 		function crashFromHash(hashHex){
 		  // Quick integrity check at each call — negligible perf cost
 		  if(!window.CFG||window.CFG.HOUSE_EDGE!==0.01) return 1.00;
+		  const base=crashFromHashRaw(hashHex);
+		  // Apply volatility drift: scales the result by 0..15% based on drift.
+		  // NOTE: drift is COSMETIC ONLY and must never be applied to the
+		  // verifiable base value. crashFromHashRaw is the pure formula that
+		  // matches the server exactly; verify() uses it.
+		  const driftFactor=1+(volDrift*0.05);
+		  let result=base*driftFactor;
+		  // Back toward neutral: if drift was applied, decay it slightly
+		  if(volDrift>0.01) volDrift-=0.08;
+		  else if(volDrift<-0.01) volDrift+=0.08;
+		  result=Math.min(result, CFG.MAX_MULT);
+		  return Math.max(1.00, Math.floor(result*100)/100);
+		}
+		/* Pure crash formula — IDENTICAL to lib/server-engine.js crashFromHash.
+		   No volDrift, no integrity check. Used by verify() so the displayed
+		   crash point always matches what the server committed to. */
+		function crashFromHashRaw(hashHex){
+		  if(!hashHex||hashHex.length<12) return 1.0;
 		  const h=parseInt(hashHex.slice(0,8),16);
 		  const r=h/0xFFFFFFFF;
-		  if(r>1-CFG.HOUSE_EDGE) return 1.00;
+		  if(r>1-CFG.HOUSE_EDGE) return 1.0;
 		  const m=(1-CFG.HOUSE_EDGE)/(1-r);
 		  const h2=parseInt(hashHex.slice(8,12),16)/0xFFFF;
 		  let result=m;
 		  if(h2>0.97) result=m*(1+(h2-0.97)*8);
-		  // Apply volatility drift: scales the result by 0..15% based on drift
-		  const driftFactor=1+(volDrift*0.05);
-		  result=result*driftFactor;
-		  // Back toward neutral: if drift was applied, decay it slightly
-		  if(volDrift>0.01) volDrift-=0.08;
-		  else if(volDrift<-0.01) volDrift+=0.08;
 		  result=Math.min(result, CFG.MAX_MULT);
 		  return Math.max(1.00, Math.floor(result*100)/100);
 		}
@@ -612,6 +624,71 @@ function randHex(n){
 		  const main=document.getElementById('gameMain');
 		  if(main){ main.classList.toggle('hot', volDrift>0.6); main.classList.toggle('cold', volDrift<-0.6); }
 		}
+
+/* ============================================================
+   v6 — SERVER-AUTHORITATIVE ROUND ENGINE (Aviator/JetX model)
+   ------------------------------------------------------------
+   The crash point is no longer computable by the client. Each round:
+   1. startBetting() calls POST /api/round-start → gets an opaque
+      AES-256-GCM token + a SHA-256 commitment. crashAt lives only
+      inside the token, which the client CANNOT decrypt.
+   2. During flight the loop polls POST /api/round-tick, which reports
+      the live multiplier computed from the SERVER's clock. The client
+      cannot stall or fake elapsed time.
+   3. On bust the server reveals serverSeed + crashAt; the player can
+      finally verify commitment → SHA-256(seed) and recompute the hash.
+   4. Cashouts go through POST /api/round-cashout which authoritatively
+      decides win/bust from the server clock — no client trust.
+
+   Legacy client-side path (crashFromHash + SAVE.serverSeed) is kept as
+   a *fallback only*: if the API is unreachable, a clearly-labelled
+   "offline demo" round runs with the old (cheatable) logic so the game
+   stays playable during outages. The on-screen hash badge flips to red
+   "OFFLINE MODE" to be honest about it.
+   ============================================================ */
+const API={ START:'/api/round-start', TICK:'/api/round-tick', CASHOUT:'/api/round-cashout' };
+let _apiAvailable=null; // null=unknown, true=up, false=down
+async function apiPost(url, body){
+  const ctrl=new AbortController();
+  const to=setTimeout(()=>ctrl.abort(), 4000);
+  try{
+    const r=await fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body||{}),
+      signal:ctrl.signal,
+      credentials:'same-origin',
+    });
+    clearTimeout(to);
+    if(!r.ok) return { ok:false, status:r.status, error:'http-'+r.status };
+    const j=await r.json();
+    return j||{ok:false,error:'empty'};
+  }catch(e){ clearTimeout(to); return { ok:false, error:'network', msg:String(e&&e.message||e) }; }
+}
+/* Probe once at startup so the UI can label itself honestly. */
+async function apiProbe(){
+  const r=await apiPost(API.START, { probe:true, clientSeed:randHex(8) });
+  _apiAvailable = !!(r && r.ok && r.token);
+  return _apiAvailable;
+}
+/* Start a server round. Returns the server payload or null on failure. */
+async function serverRoundStart(clientSeed){
+  const r=await apiPost(API.START, { clientSeed });
+  if(!r||!r.ok||!r.token) return null;
+  return r;
+}
+/* Poll the server for the live multiplier / bust. */
+async function serverRoundTick(token){
+  const r=await apiPost(API.TICK, { token });
+  if(!r||!r.ok) return null;
+  return r;
+}
+/* Validate a cashout with the server. */
+async function serverRoundCashout(token, amount){
+  const r=await apiPost(API.CASHOUT, { token, amount });
+  if(!r||!r.ok) return null;
+  return r;
+}
 
 /* ---------- Persistence v4 — integrity-protected ---------- */
 const KEY=CFG.SAVE_KEY||'boost_save_v4';
@@ -1104,13 +1181,20 @@ const BODY_FONT=getComputedStyle(document.body).fontFamily||'sans-serif';
 		  bustScale:0,
 	  rocketX:0, rocketY:0, rocketAng:0,
 	  time:0, last:0, get balance(){ return _gBalance; }, set balance(v){ _gBalance=typeof v==='number'&&v>=0&&v<999999999?v:_gBalance; },
-	  started:false,
-	  bgStars:[], bgNebula:[], bgShooters:[], lastTickMult:1,
-	  roundHash:'', roundHashFull:'',
-	  hitMile:[], lastCashPoint:0,
-		  _lastCountdown:0, _lastBotRender:0, _suspectTime:0, _lastSwell:0, _firstFrame:0,
-		  _riserTriggered:false
-		};
+		  started:false,
+		  bgStars:[], bgNebula:[], bgShooters:[], lastTickMult:1,
+		  roundHash:'', roundHashFull:'',
+		  /* ---- server-authoritative round state (v6) ----
+		     roundToken carries the AES-encrypted crashAt; the client cannot
+		     read it. crashAt stays at its sentinel until the server reveals
+		     it on bust. commitment = SHA-256(serverSeed), shown pre-flight. */
+		  roundToken:'', commitment:'', serverLaunchTs:0, serverNonce:0, serverClientSeed:'',
+		  serverMode:false, /* true when the current round is server-authoritative */
+		  serverBusted:false, serverRevealedSeed:'', _tickInFlight:false, _lastTickAt:0, _lastServerMult:0,
+		  hitMile:[], lastCashPoint:0,
+			  _lastCountdown:0, _lastBotRender:0, _suspectTime:0, _lastSwell:0, _firstFrame:0,
+			  _riserTriggered:false
+			};
 	// Seal the G object to prevent new properties being injected (tamper resistance)
 	Object.seal(G);
 
@@ -1190,6 +1274,9 @@ window.addEventListener('resize',resize);
 	  if(fl){ while(fl.firstChild) fl.removeChild(fl.firstChild); }
 	G.phase=PH.BET; G.phaseT=0; G.mult=1; G.elapsed=0; G.curve=[]; G.embers=[]; G.smoke=[]; G._lastCountdown=0;
   G.particles=[]; G.coins=[]; G.confetti=[]; G.rings=[]; G.debris=[]; G.bustScale=0;
+  // reset server round state
+  G.serverMode=false; G.serverBusted=false; G.roundToken=''; G.commitment='';
+  G.serverLaunchTs=0; G.serverRevealedSeed=''; G._tickInFlight=false; G._lastTickAt=0; G._lastServerMult=0;
   for(const b of G.bets){ b.placed=false; b.cashedOut=false; b.cashMult=0; b.winAmt=0; }
   setPhase('PLACE YOUR BETS','',false);
   A.musicBet();
@@ -1197,10 +1284,40 @@ window.addEventListener('resize',resize);
   document.getElementById('mult').className='fly';
   document.getElementById('mult').innerHTML='1.00<span style="font-size:.45em">×</span>';
   document.getElementById('pfHash').textContent='generating...';
-  const msg=SAVE.serverSeed+':'+SAVE.clientSeed+':'+SAVE.nonce;
-  G.roundHashFull=await sha256Hex(msg);
-  G.roundHash=G.roundHashFull.slice(0,16);
-  document.getElementById('pfHash').textContent=G.roundHash+'…';
+  /* v6: ask the server for a fresh round. The server generates a SECRET
+     serverSeed, computes crashAt, and returns an opaque encrypted token +
+     SHA-256(serverSeed) commitment. crashAt is NOT in the response. */
+  const pfBadge=document.getElementById('pfHash');
+  try{
+    const sr=await serverRoundStart(SAVE.clientSeed);
+    if(sr && sr.token){
+      G.serverMode=true;
+      G.roundToken=sr.token;
+      G.commitment=sr.commitment;
+      G.serverNonce=sr.nonce;
+      G.serverClientSeed=sr.clientSeed||SAVE.clientSeed;
+      G.serverLaunchTs=sr.started||Date.now();
+      // The "hash" we show now is the commitment (not the full pre-image hash).
+      // This is the honest provably-fair display: you see WHAT was committed,
+      // not the seed itself.
+      G.roundHash=(sr.commitment||'').slice(0,16);
+      G.roundHashFull=sr.commitment||'';
+      if(pfBadge){ pfBadge.textContent=G.roundHash+'…'; pfBadge.style.color='var(--grn)'; pfBadge.title='Server-committed (SHA-256 of secret seed). Verifiable after bust.'; }
+    }else{
+      // Fallback: offline / legacy client-side demo round. Be honest about it.
+      _apiAvailable=false;
+      const msg=SAVE.serverSeed+':'+SAVE.clientSeed+':'+SAVE.nonce;
+      G.roundHashFull=await sha256Hex(msg);
+      G.roundHash=G.roundHashFull.slice(0,16);
+      if(pfBadge){ pfBadge.textContent=G.roundHash+'… (OFFLINE)'; pfBadge.style.color='var(--gold)'; pfBadge.title='Server unreachable — running in cheatable offline demo mode.'; }
+    }
+  }catch(e){
+    _apiAvailable=false;
+    const msg=SAVE.serverSeed+':'+SAVE.clientSeed+':'+SAVE.nonce;
+    G.roundHashFull=await sha256Hex(msg);
+    G.roundHash=G.roundHashFull.slice(0,16);
+    if(pfBadge){ pfBadge.textContent=G.roundHash+'… (OFFLINE)'; pfBadge.style.color='var(--gold)'; }
+  }
   document.getElementById('ring').classList.add('show');
   renderBets(); updateStreakInd();
   setTimeout(autoBetPlace, 350);
@@ -1211,11 +1328,18 @@ window.addEventListener('resize',resize);
 			  G.phase=PH.FLY; G.phaseT=0; G.elapsed=0; G.mult=1; G.curve=[{t:0,m:1}]; G.hitMile=[];
 			  G._riserTriggered=false; // ponytail: 100/100 — reset riser for next round
 			  G.lastTickMult=1; // ponytail: was never reset → tick SFX + mult pulse stayed silent after any round whose peak exceeded the next round's climb
+			  G.serverBusted=false;
 		  const placedThisRound=[]; for(let i=0;i<G.bets.length;i++){const b=G.bets[i];if(b.placed)placedThisRound.push({idx:b.idx,amount:b.amount,autoAt:b.autoAt});}
 	  if(placedThisRound.length){ SAVE.lastBets=placedThisRound; save(); }
-	  // ponytail: wrap crashAt calculation in try-catch so a corrupted/crashing hash
-	  // function or other error doesn't leave G.crashAt undefined → infinite flight
-	  try{ G.crashAt=crashFromHash(G.roundHashFull); }catch(e){ G.crashAt=2.0; }
+	  /* v6: in server mode the crash point is unknown to the client.
+	     We set a high sentinel so the CLIENT never auto-crashes early;
+	     the real bust comes from /api/round-tick. Offline fallback uses
+	     the legacy client-side crashFromHash. */
+	  if(G.serverMode){
+	    G.crashAt=CFG.MAX_MULT; // sentinel — real bust is server-driven
+	  }else{
+	    try{ G.crashAt=crashFromHash(G.roundHashFull); }catch(e){ G.crashAt=2.0; }
+	  }
 	  if(typeof G.crashAt!=='number'||G.crashAt<1||G.crashAt>CFG.MAX_MULT) G.crashAt=2.0;
 	  setPhase('FLYING','',true);
 	  document.getElementById('ring').classList.remove('show');
@@ -1304,9 +1428,15 @@ window.addEventListener('resize',resize);
 	  pushHistory(G.crashAt, anyWon?'w':(anyLost?'l':'-'), histTotalWin);
   if(G.started) botRoundEnd(G.crashAt);
   SAVE.roundsPlayed++; SAVE.nonce++;
-  SAVE.provReveals.unshift({hash:G.roundHash,seed:SAVE.serverSeed,clientSeed:SAVE.clientSeed,nonce:SAVE.nonce-1,crash:G.crashAt});
+  // v6: in server mode, the revealed seed is the server's (just-declassified)
+  // secret, NOT SAVE.serverSeed. Store that so the Verify UI can recompute.
+  if(G.serverMode){
+    SAVE.provReveals.unshift({hash:G.roundHash,seed:G.serverRevealedSeed||SAVE.serverSeed,clientSeed:G.serverClientSeed||SAVE.clientSeed,nonce:G.serverNonce||(SAVE.nonce-1),crash:G.crashAt,server:true});
+  }else{
+    SAVE.provReveals.unshift({hash:G.roundHash,seed:SAVE.serverSeed,clientSeed:SAVE.clientSeed,nonce:SAVE.nonce-1,crash:G.crashAt});
+  }
   SAVE.provReveals=SAVE.provReveals.slice(0,10);
-	  if(SAVE.nonce%50===0){ SAVE.serverSeed=randHex(16); }
+	  if(!G.serverMode && SAVE.nonce%50===0){ SAVE.serverSeed=randHex(16); }
 	  save();
 	  updateVolatility(G.crashAt);
   resetCombo();
@@ -1333,8 +1463,58 @@ window.addEventListener('resize',resize);
 	}
 function doCashOut(b){
   if(G.phase!==PH.FLY||!b.placed||b.cashedOut)return;
-  b.cashedOut=true; b.cashMult=G.mult;
-  const baseWin=Math.round(b.amount*G.mult);
+  // v6: server-authoritative cashout. In server mode we must NOT trust the
+  // local multiplier — the server recomputes it from its own clock. We mark
+  // the bet as "pending" so the player gets instant UI feedback (button
+  // freezes), then await the verdict. If the server says busted, the bet
+  // stays lost (no payout). If the server is unreachable mid-flight, we
+  // honour the LOCAL multiplier as a best-effort fallback (better to pay
+  // the player during a transient outage than to void their tap).
+  if(G.serverMode && !G.serverBusted){
+    if(b._pendingCash) return;       // already awaiting verdict
+    b._pendingCash=true; renderBets();
+    serverRoundCashout(G.roundToken, b.amount).then(verdict=>{
+      b._pendingCash=false;
+      if(G.phase!==PH.FLY && G.phase!==PH.CRASH){ /* round already over elsewhere */ return; }
+      if(verdict && verdict.valid){
+        // Server honoured the cashout at its authoritative multiplier.
+        const serverMult = verdict.mult || G.mult;
+        // Snap local mult to the server value for visual consistency.
+        G.mult = serverMult;
+        _applyCashOut(b, serverMult, verdict.win);
+      }else if(verdict && verdict.valid===false){
+        // Server says it already busted → this bet is lost. Mark it so the
+        // round-end accounting counts it correctly.
+        b.cashedOut=false; b._serverLost=true;
+        if(!G.serverBusted){
+          // Bust wasn't yet detected by the tick loop — apply it now from
+          // the authoritative reveal.
+          G.serverBusted=true;
+          G.crashAt=verdict.crashAt||G.crashAt;
+          G.mult=G.crashAt;
+          G.serverRevealedSeed=verdict.serverSeed||'';
+          doCrash();
+        }
+      }else{
+        // Network failure mid-cashout: best-effort fallback at local mult.
+        _applyCashOut(b, G.mult, Math.round(b.amount*G.mult));
+      }
+    }).catch(()=>{
+      b._pendingCash=false;
+      _applyCashOut(b, G.mult, Math.round(b.amount*G.mult));
+    });
+    return;
+  }
+  _applyCashOut(b, G.mult, Math.round(b.amount*G.mult));
+}
+/* Inner applier: performs the actual payout + celebration at the given
+   (server-authoritative OR local-fallback) multiplier and win amount. */
+function _applyCashOut(b, mult, winOverride){
+  if(b.cashedOut)return;
+  b.cashedOut=true; b.cashMult=mult;
+  const baseWin = (typeof winOverride==='number' && winOverride>0) ? winOverride : Math.round(b.amount*mult);
+  // Note: winOverride (from the server) already equals amount*mult at server clock.
+  // We still compute the streak bonus on top of the honoured base win.
   const bonusMult=Math.min(CFG.STREAK_BONUS_MAX, SAVE.winStreak*CFG.STREAK_BONUS_STEP);
   const bonus=Math.round(baseWin*bonusMult);
   const totalWin=baseWin+bonus;
@@ -1342,23 +1522,23 @@ function doCashOut(b){
   b.winAmt=totalWin;
   G.balance+=totalWin;
   SAVE.stats.w++; SAVE.stats.profit+=profit;
-  if(G.mult>SAVE.stats.best)SAVE.stats.best=G.mult;
+  if(mult>SAVE.stats.best)SAVE.stats.best=mult;
   if(profit>SAVE.biggestWin){ SAVE.biggestWin=profit; pushLeaderboard('🏆 Big Win',profit); }
   SAVE.balance=G.balance; save();
   // Multi-tier celebration based on cash-out multiplier
-  const tier=G.mult>=25?'legendary':G.mult>=10?'epic':G.mult>=5?'rare':G.mult>=2?'good':'base';
+  const tier=mult>=25?'legendary':mult>=10?'epic':mult>=5?'rare':mult>=2?'good':'base';
   if(tier==='legendary'){ A.jackpot(); A.coinCascade(20); haptic([40,30,40,30,60,40,50]); }
   else if(tier==='epic'){ A.jackpot(); A.coinCascade(14); haptic([40,30,40,30,60]); }
   else if(tier==='rare'){ A.doubleCash(); A.coinCascade(6); haptic([30,40,30]); }
-  else { A.cashout(G.mult); haptic([20,30,20]); }
+  else { A.cashout(mult); haptic([20,30,20]); }
   const celebClass=tier==='legendary'?'jackpot':tier==='epic'?'jackpot':tier==='rare'?'win':'win';
-  floatText(G.rocketX,G.rocketY,fmt(G.mult)+'×  +'+totalWin.toLocaleString()+' 🪙', celebClass);
-  if(tier==='legendary'||tier==='epic') setTimeout(()=>showShareCard(G.mult,totalWin), 700);
+  floatText(G.rocketX,G.rocketY,fmt(mult)+'×  +'+totalWin.toLocaleString()+' 🪙', celebClass);
+  if(tier==='legendary'||tier==='epic') setTimeout(()=>showShareCard(mult,totalWin), 700);
   if(!SAVE.settings.reducedMotion){
     // Scale all effects by multiplier intensity
-    const intensity=Math.min(1, (G.mult-1)/20);
-    const isBig=G.mult>=5;
-    const isMassive=G.mult>=10;
+    const intensity=Math.min(1, (mult-1)/20);
+    const isBig=mult>=5;
+    const isMassive=mult>=10;
     // Screen flash — green→gold, brighter for bigger wins
     G.flash=isMassive?0.7:isBig?0.55:0.35;
     G.flashColor=isMassive?'255,199,64':isBig?'255,180,50':'46,230,138';
@@ -1382,15 +1562,15 @@ function doCashOut(b){
     if(isBig) G.shake=Math.max(G.shake||0, 3+intensity*8);
   }
   const bonusTxt=bonus>0?' (+'+bonus+' streak!)':'';
-  showBanner('SLOT '+(b.idx+1)+' · '+fmt(G.mult)+'×  +'+totalWin+' 🪙'+bonusTxt,'win');
-  announce('Cashed out slot '+(b.idx+1)+' at '+fmt(G.mult)+' times. Won '+totalWin.toLocaleString()+' coins.');
+  showBanner('SLOT '+(b.idx+1)+' · '+fmt(mult)+'×  +'+totalWin+' 🪙'+bonusTxt,'win');
+  announce('Cashed out slot '+(b.idx+1)+' at '+fmt(mult)+' times. Won '+totalWin.toLocaleString()+' coins.');
   flashStat('balance'); renderBets(); updateStats();
-  missionEvent('cashCount',1); missionEvent('winCount',1); missionEvent('reachMult',G.mult); missionEvent('winAmount',totalWin);
-  bumpCombo(); addXP(Math.round(20+G.mult*8));
-  if(G.mult>=10){ SAVE.luckyBoxes=(SAVE.luckyBoxes||0)+1; updateLbxBtn(); toast('\u{1F381} Big win bonus: +1 Lucky Box!'); }
+  missionEvent('cashCount',1); missionEvent('winCount',1); missionEvent('reachMult',mult); missionEvent('winAmount',totalWin);
+  bumpCombo(); addXP(Math.round(20+mult*8));
+  if(mult>=10){ SAVE.luckyBoxes=(SAVE.luckyBoxes||0)+1; updateLbxBtn(); toast('\u{1F381} Big win bonus: +1 Lucky Box!'); }
   let allCashed=0; for(let i=0;i<G.bets.length;i++) if(G.bets[i].cashedOut) allCashed++; if(allCashed===2) doubleFlashShow();
   const allInWin = b.amount>=G.balance+b.amount-1 && profit>0;
-  checkAchievements({maxCash:G.mult,safeCashes:(G.mult<1.5?1:0),allInWin});
+  checkAchievements({maxCash:mult,safeCashes:(mult<1.5?1:0),allInWin});
 }
 
 /* ============================================================
@@ -1514,11 +1694,46 @@ function loop(ts){
     if(G.phaseT>200 && Math.floor(G.phaseT)%1000<16) rpMaybeRealityCheck();
 	  } else if(G.phase===PH.FLY){
 	    G.elapsed+=dt;
+	    // v6: in server mode, poll the server for the authoritative multiplier.
+	    // The server computes elapsed from ITS clock, so the client can't lie.
+	    // We fire-and-forget async; the result is applied when it arrives.
+	    if(G.serverMode && !G.serverBusted && !G._tickInFlight && (performance.now()-(G._lastTickAt||0)>180)){
+	      G._tickInFlight=true; G._lastTickAt=performance.now();
+	      serverRoundTick(G.roundToken).then(tk=>{
+	        G._tickInFlight=false;
+	        if(!tk || !tk.ok){ return; } // transient — keep local curve going
+	        if(tk.state==='fly'){
+	          // Server is the source of truth for the multiplier. Drift the local
+	          // mult toward the server's value smoothly so the curve doesn't jump.
+	          G._lastServerMult=tk.mult;
+	        }else if(tk.state==='busted' && !G.serverBusted){
+	          // Authoritative bust from the server. This is the ONLY place the
+	          // real crashAt becomes known to the client.
+	          G.serverBusted=true;
+	          G.crashAt=tk.crashAt;
+	          G.mult=tk.crashAt;
+	          G.serverRevealedSeed=tk.serverSeed||'';
+	          // Reveal the full hash now for the history / provably-fair panel.
+	          G.roundHashFull=tk.serverSeed||G.roundHashFull;
+	          G.roundHash=(tk.serverSeed||'').slice(0,16);
+	          const pfBadge=document.getElementById('pfHash');
+		  if(pfBadge){ pfBadge.textContent=G.roundHash+'… ✓'; pfBadge.style.color='var(--grn)'; pfBadge.title='Seed revealed — verifiable now.'; }
+	          if(G.phase===PH.FLY){ G.mult=G.crashAt; doCrash(); }
+	        }
+	      }).catch(()=>{ G._tickInFlight=false; });
+	    }
 	    // ponytail: compound multiplier with subtle quadratic acceleration — creates a
 	    // "taut rubber band" feel. At low mults it's gentle; past 3-4× the curve steepens
 	    // imperceptibly, driving heart rate up without the player noticing the formula change.
 	    const accel=1+0.08*Math.min(1,Math.max(0,(G.elapsed-4000)/6000)); // 4s→10s taper
-	    G.mult=1.0024*Math.exp(CFG.GROWTH*G.elapsed*2.5*(accel));
+	    let localMult=1.0024*Math.exp(CFG.GROWTH*G.elapsed*2.5*(accel));
+	    // v6: in server mode, gently correct the local estimate toward the server's
+	    // last authoritative reading. This keeps the curve visually smooth while making
+	    // it impossible to drift far from the truth.
+	    if(G.serverMode && G._lastServerMult>0){
+	      localMult=localMult*0.6 + G._lastServerMult*0.4;
+	    }
+	    G.mult=localMult;
 	    G.curve.push({t:G.elapsed,m:G.mult}); if(G.curve.length>300)G.curve.shift();
 	    A.updateFlight(G.mult);
 	    if(G.mult-G.lastTickMult>=0.1){ A.tick(); G.lastTickMult=G.mult; }
@@ -1527,15 +1742,19 @@ function loop(ts){
 	    for(const ml of MILES){ if(!G.hitMile[ml.t] && G.mult>=ml.v){ G.hitMile[ml.t]=1; milestoneFlash(ml.t,ml.tx); } }
 	    const last=plot(G.elapsed,G.mult);
 	    if(!SAVE.settings.reducedMotion && Math.random()<0.7){ const sk=skinById(SAVE.equippedSkin); G.embers.push({x:last.x,y:last.y,vx:-20-Math.random()*30,vy:30+Math.random()*40,life:0.5+Math.random()*.3,age:0,r:1.5+Math.random()*2,col:sk.trail}); }
-	    for(const b of G.bets){ if(b.placed && !b.cashedOut && G.mult>=b.autoAt) doCashOut(b); }
-		    // ponytail: double-check crashAt validity every frame during flight — if it somehow
-		    // got corrupted (e.g. crashFromHash threw and was caught), floor at 1.01 so the round
-		    // ends quickly rather than flying to infinity
-		    if(typeof G.crashAt!=='number'||G.crashAt<1||!isFinite(G.crashAt)) G.crashAt=1.01;
-		    // ponytail: 100/100 — key modulation + riser sweep before crash (auditory looming)
-		    A.updateRiser(G.mult);
-		    if(G.crashAt-G.mult<0.3&&G.crashAt-G.mult>0&&!G._riserTriggered){ G._riserTriggered=true; A.startRiser(); }
-		    if(G.mult>=G.crashAt){ G.mult=G.crashAt; doCrash(); }
+		    for(const b of G.bets){ if(b.placed && !b.cashedOut && G.mult>=b.autoAt) doCashOut(b); }
+			    // ponytail: double-check crashAt validity every frame during flight — if it somehow
+			    // got corrupted (e.g. crashFromHash threw and was caught), floor at 1.01 so the round
+			    // ends quickly rather than flying to infinity. In SERVER mode crashAt is a sentinel
+			    // (CFG.MAX_MULT) until the server reveals the real value, so this guard never fires.
+			    if(typeof G.crashAt!=='number'||G.crashAt<1||!isFinite(G.crashAt)) G.crashAt=1.01;
+			    // ponytail: 100/100 — key modulation + riser sweep before crash (auditory looming)
+			    A.updateRiser(G.mult);
+			    if(G.crashAt-G.mult<0.3&&G.crashAt-G.mult>0&&!G._riserTriggered){ G._riserTriggered=true; A.startRiser(); }
+			    // v6: in server mode ONLY the server can declare a bust (via tick). The client
+			    // never auto-crashes, so even a fully compromised client cannot force an early
+			    // doCrash to "lock in" a fake multiplier. Offline mode keeps the legacy behaviour.
+			    if(!G.serverMode && G.mult>=G.crashAt){ G.mult=G.crashAt; doCrash(); }
 	  } else if(G.phase===PH.CRASH){
 	    G.phaseT+=dt; G.bustScale+=dt;
 	    if(G.phaseT>=CFG.CRASH_PAUSE) startBetting();
@@ -1990,19 +2209,29 @@ function openSettings(){
 }
 function openProvFair(){
   sheetTitle.innerHTML='🔐 <b>Provably Fair</b>';
-  let html='<div style="font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:14px">Each round\'s crash point is derived from <b style="color:var(--txt)">SHA-256(serverSeed : clientSeed : nonce)</b>, then mapped through the formula below. The <b style="color:var(--grn)">hash is shown before</b> each flight, and after the round you can recompute it yourself with <b style="color:var(--txt)">Verify</b>.</div>';
-  html+='<div style="background:rgba(255,199,64,.06);border:1px solid rgba(255,199,64,.35);border-radius:11px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--gold);line-height:1.5">⚠ <b>Honesty note:</b> this is a <b>client-side demo</b>. The seed lives in your browser\'s localStorage, so a determined user could read it and predict rounds. True provably-fair play requires a server-committed seed you cannot see until after the round — that\'s a server-backend feature, not included here.</div>';
+  const online=!!G.serverMode || _apiAvailable===true;
+  let html='<div style="font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:14px">Each round\'s crash point is locked in <b style="color:var(--txt)">before</b> the flight using a <b style="color:var(--txt)">server-committed secret seed</b>. You see its <b style="color:var(--grn)">SHA-256 commitment</b> up front; the seed itself is revealed <b style="color:var(--txt)">only after</b> the rocket busts — so you can recompute the result yourself with <b style="color:var(--txt)">Verify</b>.</div>';
+  if(online){
+    html+='<div style="background:rgba(46,230,138,.06);border:1px solid rgba(46,230,138,.4);border-radius:11px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--grn);line-height:1.5">✓ <b>Server-authoritative mode.</b> The crash seed never leaves the server until bust. The multiplier during flight is computed from the server\'s clock, so the client cannot predict, stall, or forge a cashout. This is the same model Aviator and JetX use.</div>';
+  }else{
+    html+='<div style="background:rgba(255,199,64,.06);border:1px solid rgba(255,199,64,.35);border-radius:11px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--gold);line-height:1.5">⚠ <b>Offline fallback.</b> The fairness server is unreachable, so rounds are running in a <b>client-side demo mode</b> where the seed is readable. Predictability is possible until the server is back. Reload once you\'re online to restore full protection.</div>';
+  }
   html+='<div style="background:rgba(0,0,0,.3);border:1px solid var(--brd);border-radius:12px;padding:12px;margin-bottom:14px;font-family:var(--mono);font-size:11px;word-break:break-all">';
-  html+='<div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:4px">CLIENT SEED (yours — editable)</div><div style="display:flex;gap:6px;align-items:center;margin-bottom:10px"><input id="pfClient" value="'+SAVE.clientSeed+'" style="flex:1;background:rgba(0,0,0,.4);border:1px solid var(--brd);border-radius:7px;padding:5px 8px;color:var(--blu);font-family:var(--mono);font-size:11px;outline:none"><button class="actbtn" id="pfRand" style="flex:0 0 auto;padding:6px 10px">🎲</button></div>';
-  html+='<div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:4px">NEXT NONCE</div><div style="color:var(--gold);margin-bottom:10px">'+SAVE.nonce+'</div>';
-  html+='<div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:4px">CURRENT SERVER SEED</div><div style="color:var(--txt);margin-bottom:4px">'+SAVE.serverSeed+'</div>';
-  html+='<div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-top:6px;margin-bottom:4px">SHA-256(serverSeed)</div><div style="color:var(--grn)" id="srvHash">computing...</div>';
-  html+='<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--brd);font-size:10px;color:var(--dim);line-height:1.5"><b style="color:var(--txt)">formula:</b><br>r = int(hash[0:8]) / 0xFFFFFFFF<br>if r > 1 − 0.03 → 1.00× (instant bust, 3% of rounds)<br>else m = 0.97 / (1 − r), rounded to 2dp</div></div>';
+  html+='<div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:4px">CLIENT SEED (yours — editable, mixes into the hash)</div><div style="display:flex;gap:6px;align-items:center;margin-bottom:10px"><input id="pfClient" value="'+SAVE.clientSeed+'" style="flex:1;background:rgba(0,0,0,.4);border:1px solid var(--brd);border-radius:7px;padding:5px 8px;color:var(--blu);font-family:var(--mono);font-size:11px;outline:none"><button class="actbtn" id="pfRand" style="flex:0 0 auto;padding:6px 10px">🎲</button></div>';
+  html+='<div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:4px">SERVER SEED (this round)</div>';
+  if(online){
+    html+='<div style="color:var(--grn);margin-bottom:6px">🔒 sealed until bust</div>';
+    html+='<div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:4px">COMMITMENT — SHA-256(serverSeed), shown pre-flight</div><div style="color:var(--gold);margin-bottom:10px">'+((G.commitment||'').slice(0,32)||'—')+(G.commitment?'…':'')+'</div>';
+  }else{
+    html+='<div style="color:var(--txt);margin-bottom:4px">'+SAVE.serverSeed+'</div>';
+    html+='<div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-top:6px;margin-bottom:4px">SHA-256(serverSeed)</div><div style="color:var(--grn)" id="srvHash">computing...</div>';
+  }
+  html+='<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--brd);font-size:10px;color:var(--dim);line-height:1.5"><b style="color:var(--txt)">formula:</b><br>fullHash = SHA-256(serverSeed : clientSeed : nonce)<br>r = int(fullHash[0:8]) / 0xFFFFFFFF<br>if r > 1 − 0.01 → 1.00× (instant bust)<br>else m = 0.99 / (1 − r), rounded to 2dp</div></div>';
   html+='<div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px">Recent Reveals — tap VERIFY</div>';
   if(SAVE.provReveals.length===0) html+='<div style="color:var(--dimmer);text-align:center;padding:14px">Play rounds to see verified reveals</div>';
-  else SAVE.provReveals.slice(0,5).forEach((r,i)=>{ html+='<div style="background:rgba(0,0,0,.25);border:1px solid var(--brd);border-radius:10px;padding:10px;margin-bottom:6px;font-family:var(--mono);font-size:10px" data-rv="'+i+'"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="color:var(--dim)">nonce '+r.nonce+' → stored '+r.crash.toFixed(2)+'×</span><button class="actbtn" style="padding:3px 8px;font-size:9px" data-verify="'+i+'">VERIFY</button></div><div style="color:var(--txt);word-break:break-all">seed: '+r.seed+'</div><div class="pfres" style="margin-top:4px;color:var(--dimmer);font-size:9px">— not verified yet —</div></div>'; });
+  else SAVE.provReveals.slice(0,5).forEach((r,i)=>{ html+='<div style="background:rgba(0,0,0,.25);border:1px solid var(--brd);border-radius:10px;padding:10px;margin-bottom:6px;font-family:var(--mono);font-size:10px" data-rv="'+i+'"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="color:var(--dim)">nonce '+r.nonce+(r.server?' 🔒':'')+' → stored '+r.crash.toFixed(2)+'×</span><button class="actbtn" style="padding:3px 8px;font-size:9px" data-verify="'+i+'">VERIFY</button></div><div style="color:var(--txt);word-break:break-all">seed: '+r.seed+'</div><div class="pfres" style="margin-top:4px;color:var(--dimmer);font-size:9px">— not verified yet —</div></div>'; });
   sheetBody.innerHTML=html; modal.classList.add('show');
-  sha256Hex(SAVE.serverSeed).then(h=>{ const el=document.getElementById('srvHash'); if(el)el.textContent=h.slice(0,32)+'…'; });
+  if(!online){ sha256Hex(SAVE.serverSeed).then(h=>{ const el=document.getElementById('srvHash'); if(el)el.textContent=h.slice(0,32)+'…'; }); }
   const pfRand=document.getElementById('pfRand');
   if(pfRand) pfRand.onclick=()=>{ SAVE.clientSeed=randHex(8); save(); const inp=document.getElementById('pfClient'); if(inp)inp.value=SAVE.clientSeed; toast('Client seed rolled — next round uses it.'); };
   const pfClient=document.getElementById('pfClient');
@@ -2015,7 +2244,7 @@ function openProvFair(){
     // otherwise rolling/editing the client seed made every prior verify falsely MISMATCH
     const cs=r.clientSeed||SAVE.clientSeed;
     const msg=r.seed+':'+cs+':'+r.nonce;
-    const full=await sha256Hex(msg); const recomputed=crashFromHash(full);
+    const full=await sha256Hex(msg); const recomputed=crashFromHashRaw(full);
     const ok=Math.abs(recomputed-r.crash)<0.011;
     res.style.color=ok?'var(--grn)':'var(--red)';
     res.innerHTML='hash '+full.slice(0,24)+'… → <b>'+recomputed.toFixed(2)+'×</b> '+(ok?'✓ matches':'✗ MISMATCH')+(cs!==SAVE.clientSeed?' <span style="color:var(--dim)">(client seed was different then)</span>':'');
@@ -2514,6 +2743,11 @@ function init(){
   if(SAVE.history.length===0){ for(let i=0;i<10;i++){ SAVE.history.push({m:crashFromHash(randHex(8)),result:'-',winAmt:0,fresh:false}); } renderHistory(); save(); }
   watchState(); // State integrity watchdog
   requestAnimationFrame(loop);
+  // v6: probe the fairness server in the background. The result primes
+  // _apiAvailable so the Provably Fair panel can label itself honestly
+  // before the first round even starts. Non-blocking — the game plays
+  // immediately regardless.
+  apiProbe().catch(()=>{ _apiAvailable=false; });
 }
 init();
 </script>
