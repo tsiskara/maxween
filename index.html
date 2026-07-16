@@ -17,6 +17,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>BOOST — Cash Out Before It Busts · Maxween</title>
+<!-- Telegram Mini App SDK — progressive enhancement. The game works fully without
+     it; when opened inside Telegram this unlocks native haptics, theme sync,
+     cloud-save sync, and viral sharing. Loaded synchronously so window.Telegram
+     is available before init() runs. -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2306040c'/%3E%3Ctext x='32' y='44' font-size='44' text-anchor='middle' fill='%23ffc740'%3E%E2%96%B2%3C/text%3E%3C/svg%3E">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -111,6 +116,14 @@ main{flex:1; position:relative; margin:0 10px 6px; border-radius:22px; overflow:
   backdrop-filter:blur(8px); animation:stIn .4s ease}
 #streakInd.on{display:flex}
 @keyframes stIn{from{opacity:0; transform:translateX(-10px)}to{opacity:1; transform:none}}
+/* v7 — hot/cold mood chip: surfaces the volatility drift so streaks feel readable */
+#moodChip{position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:var(--z-hud);
+  display:none; align-items:center; gap:5px; padding:4px 11px; border-radius:12px; font-size:10px;
+  font-weight:900; letter-spacing:1px; backdrop-filter:blur(8px); pointer-events:none; text-transform:uppercase;
+  animation:stIn .4s ease}
+#moodChip.show{display:flex}
+#moodChip.hot{background:linear-gradient(90deg,rgba(255,107,61,.3),rgba(255,199,64,.3)); border:1px solid rgba(255,150,60,.55); color:var(--gold); box-shadow:0 0 16px rgba(255,150,60,.25)}
+#moodChip.cold{background:rgba(54,198,255,.18); border:1px solid rgba(54,198,255,.45); color:var(--blu); box-shadow:0 0 16px rgba(54,198,255,.2)}
 
 #pfBadge{position:absolute; top:10px; right:12px; z-index:var(--z-hud); cursor:pointer;
   background:rgba(0,0,0,.4); border:1px solid var(--brd); border-radius:12px; padding:5px 10px;
@@ -272,6 +285,13 @@ main{flex:1; position:relative; margin:0 10px 6px; border-radius:22px; overflow:
 
 #shareCard{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.7); z-index:var(--z-overlay); background:linear-gradient(135deg,#1a0e30,#0e2538); border:2px solid rgba(255,199,64,.6); border-radius:20px; padding:22px 26px; text-align:center; opacity:0; pointer-events:none; transition:opacity .3s, transform .3s; box-shadow:0 20px 60px rgba(255,150,60,.4); max-width:90%}
 #shareCard.show{opacity:1; transform:translate(-50%,-50%) scale(1); pointer-events:auto}
+/* v7 — compact share card: bottom-third, smaller, doesn't cover the multiplier/curve.
+   Used at round end so the celebration is felt without blocking gameplay history. */
+#shareCard.compact{top:auto!important; bottom:8px!important; transform:translate(-50%,0) scale(.78); padding:12px 16px}
+#shareCard.compact.show{transform:translate(-50%,0) scale(.78)}
+#shareCard.compact .big{font-size:30px; margin:2px 0}
+#shareCard.compact .sub{font-size:11px; margin-bottom:8px}
+#shareCard.compact .sharebtn{padding:8px 16px; font-size:11px}
 #shareCard .lab{font-size:10px; letter-spacing:3px; color:var(--gold); font-weight:800; text-transform:uppercase}
 #shareCard .big{font-size:42px; font-weight:900; font-family:var(--mono); background:linear-gradient(135deg,var(--gold),var(--red2)); -webkit-background-clip:text; background-clip:text; color:transparent; margin:6px 0}
 #shareCard .sub{font-size:12px; color:var(--dim); margin-bottom:14px}
@@ -304,6 +324,11 @@ main{flex:1; position:relative; margin:0 10px 6px; border-radius:22px; overflow:
 #doubleFlash{position:absolute; left:50%; top:40%; transform:translate(-50%,-50%) scale(.5); font-size:28px; font-weight:900; letter-spacing:3px; background:linear-gradient(135deg,var(--gold),var(--red2)); -webkit-background-clip:text; background-clip:text; color:transparent; opacity:0; pointer-events:none; z-index:var(--z-hud); white-space:nowrap; filter:drop-shadow(0 0 18px rgba(255,150,60,.7))}
 #doubleFlash.show{animation:df .9s cubic-bezier(.2,1.5,.4,1)}
 @keyframes df{0%{opacity:0; transform:translate(-50%,-30%) scale(.3) rotate(-6deg)}40%{opacity:1; transform:translate(-50%,-50%) scale(1.2) rotate(2deg)}100%{opacity:0; transform:translate(-50%,-90%) scale(1) rotate(0)}}
+/* v7 — compact mid-flight flashes: pinned to top 12%, scaled down, never cover the hero multiplier (~44%) */
+#mileFlash.compact,#doubleFlash.compact,#comboFx.compact{top:11%!important; filter:drop-shadow(0 0 8px rgba(255,150,60,.4)); opacity:.92}
+#mileFlash.compact{font-size:20px!important}
+#doubleFlash.compact{font-size:16px!important}
+#comboFx.compact{transform:translate(-50%,-50%) scale(.55)}
 
 #toast{position:fixed; left:50%; bottom:200px; transform:translate(-50%,20px); background:rgba(12,8,22,.96); border:1px solid var(--brd); border-radius:12px; padding:10px 18px; font-size:13px; font-weight:700; opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; z-index:var(--z-toast); max-width:90%; text-align:center; backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(0,0,0,.5)}
 #toast.show{opacity:1; transform:translate(-50%,0)}
@@ -383,6 +408,42 @@ main{flex:1; position:relative; margin:0 10px 6px; border-radius:22px; overflow:
 	.betbtn.cashout.red{background:linear-gradient(180deg,#ff3b5c,#c02038)!important;box-shadow:0 4px 18px rgba(255,59,92,.7), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 0 rgba(255,59,92,.5)!important;animation:cp3 .5s ease infinite!important}
 	@keyframes cp3{0%,100%{box-shadow:0 4px 18px rgba(255,59,92,.6), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 0 rgba(255,59,92,.5)}50%{box-shadow:0 4px 24px rgba(255,59,92,.9), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 8px rgba(255,59,92,0)}}
 
+/* ====== landscape / short viewport — prevent canvas collapse ======
+   On landscape phones (e.g. 568×320) the column flex gave header+panel nearly
+   all the height and main{flex:1} collapsed to ~2px, making the game unplayable
+   sideways. Compact the chrome and guarantee the canvas a playable min-height. */
+@media (max-height:480px){
+  header{padding:3px 8px 1px}
+  #history{padding:0 8px 2px}
+  main{margin:0 4px 3px; border-radius:14px; min-height:120px; flex:1 1 120px}
+  #panel{margin:0 4px 3px; padding:6px; border-radius:12px; flex:0 0 auto}
+  .bets{margin-bottom:4px; gap:6px}
+  .betacts{margin-bottom:4px; gap:4px}
+  .betcard{padding:5px; border-radius:10px}
+  .betcard .row{margin-bottom:4px; gap:4px}
+  .betcard .field input{padding:4px 2px; font-size:13px}
+  .betbtn{padding:6px 4px; font-size:12px}
+  .stats{padding-top:5px; gap:4px}
+  .stats .s{padding:2px 0}
+  .stats .s .l{font-size:6px}
+  .stats .s .v{font-size:11px}
+  .quick-mini{margin-bottom:4px; gap:2px}
+  .quick-mini button{padding:3px 0; font-size:9px}
+  .actbtn{padding:5px 4px; font-size:10px}
+  #mult{font-size:38px}
+  #multWrap{top:42%}
+  .bal{padding:4px 8px} .bal .v{font-size:13px} .bal .ic{font-size:11px}
+  .icbtn{width:28px;height:28px;font-size:12px;border-radius:9px}
+  .navbtns{gap:3px}
+  .logo{font-size:14px;letter-spacing:1px}
+  .lvlbar{display:none}
+}
+@media (max-height:380px){
+  /*. extremely short - fold the stats row away so bet controls stay reachable */
+  .stats{display:none}
+  main{min-height:110px}
+}
+
 /* ====== accessibility + Apple polish ====== */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
@@ -423,6 +484,7 @@ canvas:focus-visible{outline-offset:-4px}
     <div id="chatBar"></div>
     <div id="shareCard"><div class="lab">🎉 BIG WIN</div><div class="big" id="shareMult">10.00×</div><div class="sub" id="shareAmt">+0 🪙</div><button class="sharebtn" id="shareCopy">📋 COPY BRAG</button><button class="sharebtn cls" id="shareClose">✕</button></div>
     <div id="streakInd">🔥 <span id="streakTxt">0</span></div>
+    <div id="moodChip"></div>
     <div id="pfBadge"><div class="t">Provably Fair</div><div class="h" id="pfHash">—</div></div>
     <div id="phaseLbl">READY</div>
     <div id="multWrap"><div id="mult">1.00<span style="font-size:.45em">×</span></div><div id="multSub"></div></div>
@@ -482,41 +544,15 @@ canvas:focus-visible{outline-offset:-4px}
    ponytail: no framework, no third-party — self-contained in ~50 lines. */
 
 // ── Integrity hash of the game's critical functions ──
-// A periodic check verifies that core logic hasn't been replaced via the console.
-// The hashes are computed from the source of each function the first time they run.
+// Safe wrappers around parseInt/floor/random so a tampered global can't quietly
+// bias outcomes. (The previous DevTools "detection" + visibilitychange suspect
+// timer were dead code — their flags were written but never read. Removed v7.)
 (function(){
   const _origParseInt=window.parseInt, _origFloor=Math.floor, _origRandom=Math.random;
-  const _origLocalStorage=Object.freeze({getItem:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},setItem:function(k,v){try{localStorage.setItem(k,v);}catch(e){}},removeItem:function(k){try{localStorage.removeItem(k);}catch(e){}}});
   window.__sec={};
   Object.defineProperty(window.__sec,'safeParseInt',{value:function(s,r){return _origParseInt(s,r);},writable:false,configurable:false});
   Object.defineProperty(window.__sec,'safeFloor',{value:function(v){return _origFloor(v);},writable:false,configurable:false});
   Object.defineProperty(window.__sec,'safeRandom',{value:function(){return _origRandom();},writable:false,configurable:false});
-  // DevTools detection — checks various known indicators
-  let _devToolsOpen=false;
-  function checkDevTools(){
-    // 1. Element trick: define a getter that fires when DevTools inspects
-    const el={get x(){ _devToolsOpen=true; return 1; }};
-    console.log('%c','',el); // if DevTools is open, the getter may fire
-    // 2. Firebug detection via console.clear
-    if(window.console && console.clear && !window.__firebug__){ /* nop */ }
-    // 3. Image-based detection: DevTools triggers onerror for certain resources
-    const img=new Image();
-    Object.defineProperty(img,'id',{get:function(){_devToolsOpen=true; return '';}});
-    console.log('%c','',img);
-    return _devToolsOpen;
-  }
-  // Relaxed check — warn but don't block
-  setInterval(function(){
-    if(_devToolsOpen) return;
-    checkDevTools();
-  }, 5000);
-  // Detect when the document has been in the background too long (possible game pausing)
-  document.addEventListener('visibilitychange',function(){
-    if(document.hidden && window.G && window.G.phase==='fly'){
-      // Time spent hidden during flight is suspicious — mark round as suspicious
-      if(window.G) window.G._suspectTime=performance.now();
-    }
-  });
   // Freeze the critical config objects so they can't be replaced
   var _cfg={ HOUSE_EDGE:0.01, GROWTH:0.0000977, BET_TIME:5000, CRASH_PAUSE:3000,
     MIN_BET:1, START_BAL:1000, FREE_COOLDOWN:60000, FREE_AMT:200, FREE_MIN:50,
@@ -585,20 +621,12 @@ function randHex(n){
 		   can bypass anything client-side. But it raises the bar from "open console,
 		   type crashFromHash = ..." to "write a custom debugger script". */
 		function crashFromHash(hashHex){
-		  // Quick integrity check at each call — negligible perf cost
+		  // The crash point MUST be the pure, verifiable value. Earlier versions
+		  // multiplied by volDrift here, which broke provably-fair verification:
+		  // the stored crashAt disagreed with crashFromHashRaw() (what verify()
+		  // uses) whenever drift was nonzero. Drift is now display-only.
 		  if(!window.CFG||window.CFG.HOUSE_EDGE!==0.01) return 1.00;
-		  const base=crashFromHashRaw(hashHex);
-		  // Apply volatility drift: scales the result by 0..15% based on drift.
-		  // NOTE: drift is COSMETIC ONLY and must never be applied to the
-		  // verifiable base value. crashFromHashRaw is the pure formula that
-		  // matches the server exactly; verify() uses it.
-		  const driftFactor=1+(volDrift*0.05);
-		  let result=base*driftFactor;
-		  // Back toward neutral: if drift was applied, decay it slightly
-		  if(volDrift>0.01) volDrift-=0.08;
-		  else if(volDrift<-0.01) volDrift+=0.08;
-		  result=Math.min(result, CFG.MAX_MULT);
-		  return Math.max(1.00, Math.floor(result*100)/100);
+		  return crashFromHashRaw(hashHex);
 		}
 		/* Pure crash formula — IDENTICAL to lib/server-engine.js crashFromHash.
 		   No volDrift, no integrity check. Used by verify() so the displayed
@@ -623,6 +651,15 @@ function randHex(n){
 		  else if(crashAt>3) volDrift=Math.max(-2, volDrift-VOL_DRIFT_STRIDE*0.5);
 		  const main=document.getElementById('gameMain');
 		  if(main){ main.classList.toggle('hot', volDrift>0.6); main.classList.toggle('cold', volDrift<-0.6); }
+		  updateMoodChip();
+		}
+		/* v7 — surface volDrift as a felt hot/cold chip (BET phase only; hidden in FLY). */
+		function updateMoodChip(){
+		  const el=document.getElementById('moodChip'); if(!el)return;
+		  if(G.phase!==PH.BET){ el.classList.remove('show','hot','cold'); return; }
+		  if(volDrift>0.6){ el.className='hot show'; el.textContent='🔥 HOT — big wins due'; }
+		  else if(volDrift<-0.6){ el.className='cold show'; el.textContent='❄️ COLD — play safe'; }
+		  else { el.classList.remove('show','hot','cold'); }
 		}
 
 /* ============================================================
@@ -799,6 +836,143 @@ SAVE=load();
     }catch(e){}
   }
 })();
+
+/* ============================================================
+   v7 — TELEGRAM MINI APP INTEGRATION (progressive enhancement)
+   ------------------------------------------------------------
+   The game is a fully-functional standalone web page. When opened
+   inside Telegram (window.Telegram.WebApp exists), we layer on:
+     • viewport expand + no-scroll + safe-area handling
+     • theme color sync from Telegram's color scheme
+     • native haptic feedback (replaces navigator.vibrate)
+     • cloud-save sync (cross-device progress — huge for retention)
+     • viral share-to-Telegram on big wins
+     • back-button control
+   Everything degrades gracefully — TG unavailable → standard web behavior.
+   ============================================================ */
+const TG = (function(){
+  const wa = (typeof window!=='undefined' && window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+  const ready = !!wa;
+  const hp = ready && wa.HapticFeedback ? wa.HapticFeedback : null;
+  const cs = ready && wa.CloudStorage ? wa.CloudStorage : null;
+
+  function init(){
+    if(!wa) return;
+    try{
+      wa.ready();
+      wa.expand();
+      if(wa.enableClosingConfirmation) wa.enableClosingConfirmation();
+      if(wa.disableVerticalSwipes) wa.disableVerticalSwipes();
+      wa.onEvent('viewportChanged', () => { if(typeof resize==='function') resize(); });
+    }catch(e){}
+    applyTheme();
+    cloudPull();
+  }
+
+  function applyTheme(){
+    if(!wa || !wa.themeParams) return;
+    const tp = wa.themeParams;
+    if(tp.button_color) document.documentElement.style.setProperty('--tg-btn', tp.button_color);
+    if(tp.button_text_color) document.documentElement.style.setProperty('--tg-btn-txt', tp.button_text_color);
+  }
+
+  function haptic(style, type){
+    if(!hp) return false;
+    try{
+      if(type==='notify'){ hp.notificationOccurred(style); return true; }
+      if(type==='select'){ hp.selectionChanged(); return true; }
+      hp.impactOccurred(style||'light');
+      return true;
+    }catch(e){ return false; }
+  }
+
+  /* Cloud storage: cross-device progress. Keyed by Telegram user server-side. */
+  const CLOUD_KEY = 'boost_save_v7';
+  let _cloudBusy = false;
+  function cloudPull(){
+    if(!cs) return;
+    _cloudBusy = true;
+    try{
+      cs.getItem(CLOUD_KEY, function(err, val){
+        _cloudBusy = false;
+        if(err || !val) return;
+        try{
+          const cloud = JSON.parse(val);
+          if(cloud && typeof cloud.balance==='number' && (cloud.roundsPlayed||0) > (SAVE.roundsPlayed||0)){
+            SAVE = Object.assign(SAVE, cloud);
+            delete SAVE.__ck;
+            save();
+            if(typeof updateBalance==='function') updateBalance(true);
+            if(typeof updateStats==='function') updateStats();
+            if(typeof updateLevelBar==='function') updateLevelBar();
+            if(typeof renderBets==='function') renderBets();
+            if(typeof renderHistory==='function') renderHistory();
+            if(typeof toast==='function') toast('☁️ Progress synced from another device');
+          }
+        }catch(e){}
+      });
+    }catch(e){ _cloudBusy=false; }
+  }
+  let _pushTimer = null;
+  function cloudPush(){
+    if(!cs) return;
+    clearTimeout(_pushTimer);
+    _pushTimer = setTimeout(()=>{
+      try{
+        const snap = JSON.parse(JSON.stringify(SAVE));
+        delete snap.__ck;
+        cs.setItem(CLOUD_KEY, JSON.stringify(snap), function(err){ /* fire and forget */ });
+      }catch(e){}
+    }, 1500);
+  }
+
+  function shareWin(mult, win){
+    if(!wa) return false;
+    const url = 'https://t.me/share/url?url=' + encodeURIComponent('https://maxween.com') + '&text=' + encodeURIComponent('🚀 BOOST! Just cashed '+mult.toFixed(2)+'× → +'+win.toLocaleString()+' 🪙. Cash out before it busts!');
+    try{ wa.openTelegramLink(url); return true; }catch(e){ return false; }
+  }
+  function openShare(url){
+    if(!wa) return false;
+    try{ wa.openTelegramLink(url); return true; }catch(e){ return false; }
+  }
+
+  function setBackButton(show){
+    if(!wa || !wa.BackButton) return;
+    try{ if(show) wa.BackButton.show(); else wa.BackButton.hide(); }catch(e){}
+  }
+
+  function user(){
+    if(!wa || !wa.initDataUnsafe) return null;
+    const u = wa.initDataUnsafe.user;
+    if(!u) return null;
+    return { id: u.id, name: u.first_name||u.username||'Pilot', username: u.username||'' };
+  }
+
+  return { ready, init, applyTheme, haptic, cloudPull, cloudPush, shareWin, openShare, setBackButton, user,
+           get cloudBusy(){ return _cloudBusy; } };
+})();
+
+/* Hook haptics: prefer Telegram native, fall back to navigator.vibrate. */
+function haptic(pattern){
+  if(TG.ready){
+    if(Array.isArray(pattern)){
+      if(pattern.length>=4) TG.haptic('heavy','notify');
+      else if(pattern.length>=2) TG.haptic('medium','notify');
+      else TG.haptic('light');
+    } else {
+      TG.haptic(pattern>40?'heavy':pattern>15?'medium':'light');
+    }
+    return;
+  }
+  if(SAVE.settings.haptics && navigator.vibrate){ try{ navigator.vibrate(pattern); }catch(e){} }
+}
+
+/* Hook save() to also push to Telegram cloud (debounced). */
+const _origSave = save;
+save = function(){
+  _origSave();
+  if(TG.ready) TG.cloudPush();
+};
 
 /* ---------- Definitions ---------- */
 const ACHIEVEMENTS=[
@@ -1157,8 +1331,7 @@ const skinById=id=>SKINS.find(s=>s.id===id)||SKINS[0];
 	  };
 })();
 
-/* ---------- Haptics ---------- */
-function haptic(pattern){ if(SAVE.settings.haptics && navigator.vibrate){ try{ navigator.vibrate(pattern); }catch(e){} } }
+/* ---------- Haptics (v7: now defined earlier, hooked into Telegram native) ---------- */
 const HAP={ tick:10, bet:15, cash:[20,30,20], big:[40,30,40,30,60], crash:[60,40,80,40], milestone:[20,30,20,30], ach:[30,40,30], levelUp:[40,60,40,80,120], lbx:[30,30,30], combo:[15,25,15] };
 
 /* ---------- State ---------- */
@@ -1191,10 +1364,13 @@ const BODY_FONT=getComputedStyle(document.body).fontFamily||'sans-serif';
 		  roundToken:'', commitment:'', serverLaunchTs:0, serverNonce:0, serverClientSeed:'',
 		  serverMode:false, /* true when the current round is server-authoritative */
 		  serverBusted:false, serverRevealedSeed:'', _tickInFlight:false, _lastTickAt:0, _lastServerMult:0,
-		  hitMile:[], lastCashPoint:0,
-			  _lastCountdown:0, _lastBotRender:0, _suspectTime:0, _lastSwell:0, _firstFrame:0,
-			  _riserTriggered:false
-			};
+			  hitMile:[], lastCashPoint:0,
+				  _lastCountdown:0, _lastBotRender:0, _suspectTime:0, _lastSwell:0, _firstFrame:0,
+				  _riserTriggered:false,
+				  /* v7 — overlay discipline: full-screen celebrations defer to CRASH
+				     so they never obscure the multiplier/curve/button mid-flight. */
+				  _pendingLevelUp:false, _pendingShareCard:null, _pendingMercyToast:null
+				};
 	// Seal the G object to prevent new properties being injected (tamper resistance)
 	Object.seal(G);
 
@@ -1277,7 +1453,11 @@ window.addEventListener('resize',resize);
   // reset server round state
   G.serverMode=false; G.serverBusted=false; G.roundToken=''; G.commitment='';
   G.serverLaunchTs=0; G.serverRevealedSeed=''; G._tickInFlight=false; G._lastTickAt=0; G._lastServerMult=0;
-  for(const b of G.bets){ b.placed=false; b.cashedOut=false; b.cashMult=0; b.winAmt=0; }
+  for(const b of G.bets){ b.placed=false; b.cashedOut=false; b.cashMult=0; b.winAmt=0; b._pendingCash=false; b._serverLost=false; }
+  // ponytail: volDrift decay — was inside crashFromHash (which no longer mutates it).
+  // Pull it back toward neutral each round so the hot/cold visual doesn't get stuck.
+  if(volDrift>0.01) volDrift-=0.08; else if(volDrift<-0.01) volDrift+=0.08;
+  updateMoodChip();
   setPhase('PLACE YOUR BETS','',false);
   A.musicBet();
   document.getElementById('multSub').textContent='';
@@ -1319,7 +1499,20 @@ window.addEventListener('resize',resize);
     if(pfBadge){ pfBadge.textContent=G.roundHash+'… (OFFLINE)'; pfBadge.style.color='var(--gold)'; }
   }
   document.getElementById('ring').classList.add('show');
-  renderBets(); updateStreakInd();
+  renderBets(); updateStreakInd(); updateMoodChip();
+  /* v7 — frictionless re-bet: pre-fill each slot's amount with last round's bet
+     (capped to current balance) so re-betting is a single tap. Auto-cashout too.
+     The player still taps BET to commit — we don't auto-stake. */
+  if(SAVE.lastBets && SAVE.lastBets.length){
+    for(const lb of SAVE.lastBets){
+      if(!lb) continue;
+      const b=G.bets[lb.idx]; if(!b) continue;
+      b.amount=Math.max(CFG.MIN_BET, Math.min(lb.amount, Math.floor(G.balance)));
+      b.autoAt=lb.autoAt||b.autoAt;
+    }
+    renderBets();
+    refreshActBtns();
+  }
   setTimeout(autoBetPlace, 350);
   if(G.started) botRoundStart();
 }
@@ -1348,6 +1541,10 @@ window.addEventListener('resize',resize);
 	  renderBets();
 	}
 		function doCrash(){
+			  // ponytail: re-entrancy guard — two async server verdicts (tick + cashout)
+			  // can both pass their G.phase===PH.FLY checks in the same frame and queue
+			  // doCrash() twice. Without this guard, stats/history/balance double-count.
+			  if(G.phase===PH.CRASH) return;
 			  document.getElementById('gameMain').classList.remove('flying');
 			  G.phase=PH.CRASH; G.phaseT=0;
 			  // ponytail: triple-guard crashAt — if it's somehow bogus, floor at 1.01 so
@@ -1372,23 +1569,23 @@ window.addEventListener('resize',resize);
 		    burst(G.rocketX,G.rocketY,Math.round(particleCount*0.7),'#ff3b5c',240+fizzle*160);
 		    burst(G.rocketX,G.rocketY,Math.round(particleCount*0.5),'#ffc740',180+fizzle*120);
 		    // Ring explosion — scales with intensity
-		    G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:0.5+fizzle*0.3,age:0,col:'255,255,255',maxR:Math.max(W,H)*0.6});
-		    G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:0.8+fizzle*0.4,age:0,col:'255,60,70',maxR:Math.max(W,H)});
-		    if(fizzle>0.5) G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:1.2,age:0,col:'255,199,64',maxR:Math.max(W,H)*0.8});
-		    // Debris — more pieces, bigger spread for high crashes
-		    const debrisN=2+Math.round(fizzle*24);
-		    for(let i=0;i<debrisN;i++){
-		      const a=Math.random()*6.28;
-		      const speed=60+Math.random()*(100+fizzle*300);
-		      G.debris.push({x:G.rocketX,y:G.rocketY,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed-40,life:0.5+Math.random()*.5+fizzle*0.5,age:0,r:1+Math.random()*2+fizzle*4,rot:Math.random()*6,vr:(Math.random()-.5)*(4+fizzle*10),col:['#ff8b3d','#ff3b5c','#ffc740','#ff6b3d'][Math.floor(Math.random()*4)]});
-		    }
-		    // Smoke cloud for big explosions
-		    if(fizzle>0.3){
-		      for(let i=0;i<2+fizzle*12;i++){
-		        const a=Math.random()*6.28;
-		        G.smoke.push({x:G.rocketX+(Math.random()-.5)*20,y:G.rocketY+(Math.random()-.5)*20,vx:Math.cos(a)*(10+fizzle*40),vy:Math.sin(a)*(10+fizzle*40)-10,r:4+Math.random()*4+fizzle*8,a:0.2+Math.random()*0.2+fizzle*0.2});
-		      }
-		    }
+			    capPush(G.rings,{x:G.rocketX,y:G.rocketY,r:10,life:0.5+fizzle*0.3,age:0,col:'255,255,255',maxR:Math.max(W,H)*0.6});
+			    capPush(G.rings,{x:G.rocketX,y:G.rocketY,r:10,life:0.8+fizzle*0.4,age:0,col:'255,60,70',maxR:Math.max(W,H)});
+			    if(fizzle>0.5) capPush(G.rings,{x:G.rocketX,y:G.rocketY,r:10,life:1.2,age:0,col:'255,199,64',maxR:Math.max(W,H)*0.8});
+			    // Debris — more pieces, bigger spread for high crashes
+			    const debrisN=2+Math.round(fizzle*24);
+			    for(let i=0;i<debrisN;i++){
+			      const a=Math.random()*6.28;
+			      const speed=60+Math.random()*(100+fizzle*300);
+			      capPush(G.debris,{x:G.rocketX,y:G.rocketY,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed-40,life:0.5+Math.random()*.5+fizzle*0.5,age:0,r:1+Math.random()*2+fizzle*4,rot:Math.random()*6,vr:(Math.random()-.5)*(4+fizzle*10),col:['#ff8b3d','#ff3b5c','#ffc740','#ff6b3d'][Math.floor(Math.random()*4)]});
+			    }
+			    // Smoke cloud for big explosions
+			    if(fizzle>0.3){
+			      for(let i=0;i<2+fizzle*12;i++){
+			        const a=Math.random()*6.28;
+			        capPush(G.smoke,{x:G.rocketX+(Math.random()-.5)*20,y:G.rocketY+(Math.random()-.5)*20,vx:Math.cos(a)*(10+fizzle*40),vy:Math.sin(a)*(10+fizzle*40)-10,r:4+Math.random()*4+fizzle*8,a:0.2+Math.random()*0.2+fizzle*0.2});
+			      }
+			    }
 		  }
   setPhase('BUSTED','',false,true);
   let anyWon=false, anyLost=false, maxCash=0, safeCashes=0;
@@ -1460,7 +1657,10 @@ window.addEventListener('resize',resize);
 	    const skip=()=>{ if(G.phase===PH.CRASH) G.phaseT=CFG.CRASH_PAUSE-50; gm.removeEventListener('pointerdown',skip); };
 	    gm.addEventListener('pointerdown',skip,{once:true});
 	  },900);
-	}
+  /* v7 — flush deferred full-screen celebrations now that the round is over. */
+  if(G._pendingLevelUp){ G._pendingLevelUp=false; setTimeout(showLevelUp, 600); }
+  if(G._pendingShareCard){ const d=G._pendingShareCard; G._pendingShareCard=null; setTimeout(()=>showShareCard(d.mult,d.win), 900); }
+}
 function doCashOut(b){
   if(G.phase!==PH.FLY||!b.placed||b.cashedOut)return;
   // v6: server-authoritative cashout. In server mode we must NOT trust the
@@ -1513,6 +1713,8 @@ function _applyCashOut(b, mult, winOverride){
   if(b.cashedOut)return;
   b.cashedOut=true; b.cashMult=mult;
   const baseWin = (typeof winOverride==='number' && winOverride>0) ? winOverride : Math.round(b.amount*mult);
+  // Capture pre-payout balance for the all-in check (G.balance still excludes this win here).
+  const balanceBeforeWin = G.balance;
   // Note: winOverride (from the server) already equals amount*mult at server clock.
   // We still compute the streak bonus on top of the honoured base win.
   const bonusMult=Math.min(CFG.STREAK_BONUS_MAX, SAVE.winStreak*CFG.STREAK_BONUS_STEP);
@@ -1520,6 +1722,7 @@ function _applyCashOut(b, mult, winOverride){
   const totalWin=baseWin+bonus;
   const profit=totalWin-b.amount;
   b.winAmt=totalWin;
+  const balBeforeWin=G.balance;          // v7: capture pre-credit balance for the all-in check
   G.balance+=totalWin;
   SAVE.stats.w++; SAVE.stats.profit+=profit;
   if(mult>SAVE.stats.best)SAVE.stats.best=mult;
@@ -1533,7 +1736,11 @@ function _applyCashOut(b, mult, winOverride){
   else { A.cashout(mult); haptic([20,30,20]); }
   const celebClass=tier==='legendary'?'jackpot':tier==='epic'?'jackpot':tier==='rare'?'win':'win';
   floatText(G.rocketX,G.rocketY,fmt(mult)+'×  +'+totalWin.toLocaleString()+' 🪙', celebClass);
-  if(tier==='legendary'||tier==='epic') setTimeout(()=>showShareCard(mult,totalWin), 700);
+  if(tier==='legendary'||tier==='epic') setTimeout(()=>{
+    /* v7 — defer share card if a bet is still live; show once the round resolves. */
+    if(canShowFullCelebration()) showShareCard(mult,totalWin);
+    else G._pendingShareCard={mult,win:totalWin};
+  }, 700);
   if(!SAVE.settings.reducedMotion){
     // Scale all effects by multiplier intensity
     const intensity=Math.min(1, (mult-1)/20);
@@ -1546,14 +1753,14 @@ function _applyCashOut(b, mult, winOverride){
     if(isBig){ G.flash2=isMassive?0.35:0.2; G.flash2Color='255,255,255'; }
     // Coin shower — scaled by intensity
     const coinN=Math.round(24+intensity*60);
-    for(let i=0;i<coinN;i++) G.coins.push({x:G.rocketX+(Math.random()-.5)*(80+intensity*80),y:G.rocketY,vx:(Math.random()-.5)*(300+intensity*300),vy:-Math.random()*(400+intensity*300)-120,life:1.2+intensity*0.5,age:0,r:3+Math.random()*(5+intensity*4),rot:Math.random()*6,vr:(Math.random()-.5)*(8+intensity*6)});
+    for(let i=0;i<coinN;i++) capPush(G.coins,{x:G.rocketX+(Math.random()-.5)*(80+intensity*80),y:G.rocketY,vx:(Math.random()-.5)*(300+intensity*300),vy:-Math.random()*(400+intensity*300)-120,life:1.2+intensity*0.5,age:0,r:3+Math.random()*(5+intensity*4),rot:Math.random()*6,vr:(Math.random()-.5)*(8+intensity*6)});
     // Confetti — more for bigger wins
     const confettiN=Math.round(20+intensity*50);
-    for(let i=0;i<confettiN;i++) G.confetti.push({x:W*0.5+(Math.random()-.5)*W*(0.4+intensity*0.3),y:H*(0.25+intensity*0.1)+(Math.random()-.5)*50,vx:(Math.random()-.5)*(200+intensity*200),vy:Math.random()*(80+intensity*80)+40,life:1.5+intensity*0.5,age:0,w:3+Math.random()*(4+intensity*3),h:5+Math.random()*(4+intensity*4),rot:Math.random()*6,vr:(Math.random()-.5)*(10+intensity*8),hue:Math.floor(Math.random()*360)});
+    for(let i=0;i<confettiN;i++) capPush(G.confetti,{x:W*0.5+(Math.random()-.5)*W*(0.4+intensity*0.3),y:H*(0.25+intensity*0.1)+(Math.random()-.5)*50,vx:(Math.random()-.5)*(200+intensity*200),vy:Math.random()*(80+intensity*80)+40,life:1.5+intensity*0.5,age:0,w:3+Math.random()*(4+intensity*3),h:5+Math.random()*(4+intensity*4),rot:Math.random()*6,vr:(Math.random()-.5)*(10+intensity*8),hue:Math.floor(Math.random()*360)});
     // Multi-ring punch
-    G.rings.push({x:G.rocketX,y:G.rocketY,r:10,life:0.4+intensity*0.3,age:0,col:'255,255,255',maxR:Math.max(W,H)*(0.3+intensity*0.3)});
-    G.rings.push({x:W*0.5,y:H*0.44,r:10,life:0.8+intensity*0.4,age:0,col:isMassive?'255,199,64':'46,230,138',maxR:Math.max(W,H)*(0.5+intensity*0.4)});
-    if(isMassive) G.rings.push({x:W*0.5,y:H*0.44,r:10,life:1.2,age:0,col:'176,123,255',maxR:Math.max(W,H)*0.9});
+    capPush(G.rings,{x:G.rocketX,y:G.rocketY,r:10,life:0.4+intensity*0.3,age:0,col:'255,255,255',maxR:Math.max(W,H)*(0.3+intensity*0.3)});
+    capPush(G.rings,{x:W*0.5,y:H*0.44,r:10,life:0.8+intensity*0.4,age:0,col:isMassive?'255,199,64':'46,230,138',maxR:Math.max(W,H)*(0.5+intensity*0.4)});
+    if(isMassive) capPush(G.rings,{x:W*0.5,y:H*0.44,r:10,life:1.2,age:0,col:'176,123,255',maxR:Math.max(W,H)*0.9});
     // Sparkle burst
     burst(G.rocketX,G.rocketY,Math.round(16+intensity*30),isMassive?'#ffc740':'#2ee68a',Math.round(200+intensity*200));
     // Extra particle burst for massive wins from center
@@ -1569,7 +1776,11 @@ function _applyCashOut(b, mult, winOverride){
   bumpCombo(); addXP(Math.round(20+mult*8));
   if(mult>=10){ SAVE.luckyBoxes=(SAVE.luckyBoxes||0)+1; updateLbxBtn(); toast('\u{1F381} Big win bonus: +1 Lucky Box!'); }
   let allCashed=0; for(let i=0;i<G.bets.length;i++) if(G.bets[i].cashedOut) allCashed++; if(allCashed===2) doubleFlashShow();
-  const allInWin = b.amount>=G.balance+b.amount-1 && profit>0;
+  // All-in: the bet was (nearly) the entire balance before payout. balBeforeWin
+  // is pre-win, and b.amount was already deducted at bet-placement time, so the
+  // pre-bet balance was balBeforeWin + b.amount. All-in means b.amount ≈ that.
+  const preBetBalance = balBeforeWin + b.amount;
+  const allInWin = b.amount >= preBetBalance - 1 && profit > 0;
   checkAchievements({maxCash:mult,safeCashes:(mult<1.5?1:0),allInWin});
 }
 
@@ -1583,7 +1794,25 @@ function addXP(amt){
   SAVE.xp=(SAVE.xp||0)+amt; let leveled=false;
   while(SAVE.xp>=xpForLevel(SAVE.level)){ SAVE.xp-=xpForLevel(SAVE.level); SAVE.level++; leveled=true; const bonus=SAVE.level*150; G.balance+=bonus; SAVE.balance=G.balance; SAVE.luckyBoxes=(SAVE.luckyBoxes||0)+1; }
   updateLevelBar(); save(); updateBalance();
-  if(leveled) showLevelUp();
+  if(leveled){
+    /* v7 — overlay discipline: a full-screen level-up overlay would hide the live
+       curve + multiplier while another slot is still flying. Defer to CRASH. */
+    if(canShowFullCelebration()) showLevelUp();
+    else { G._pendingLevelUp=true; pulseLevelChip(); }
+  }
+}
+/* v7 — can a full-screen / centered celebration show right now without obscuring
+   an active bet? Yes if we're not flying, or every placed bet is already resolved. */
+function canShowFullCelebration(){
+  if(G.phase!==PH.FLY) return true;
+  return G.bets.every(b=>b.cashedOut||!b.placed);
+}
+/* lightweight inline chip pulse on the XP bar so a deferred level-up is still felt */
+function pulseLevelChip(){
+  const fill=document.getElementById('lvlFill'); if(!fill)return;
+  fill.style.filter='brightness(1.6) drop-shadow(0 0 10px #ffc740)';
+  setTimeout(()=>{ if(fill) fill.style.filter=''; }, 700);
+  const tc=document.getElementById('titleChip'); if(tc){ const orig=tc.textContent; tc.textContent='⬆ LV '+SAVE.level+'!'; setTimeout(()=>{ if(tc) tc.textContent=orig; },1400); }
 }
 function updateLevelBar(){
   const need=xpForLevel(SAVE.level), pct=Math.min(100,(SAVE.xp/need)*100);
@@ -1600,7 +1829,7 @@ function showLevelUp(){
   document.getElementById('luRwd').textContent='+'+(SAVE.level*150)+' \u{1FA99} + \u{1F381} Lucky Box';
   ov.classList.add('show'); A.levelUp(); haptic(HAP.levelUp);
   burst(W/2,H*0.45,40,'#ffc740',300); burst(W/2,H*0.45,24,'#b07bff',260);
-  G.rings.push({x:W/2,y:H*0.45,r:10,life:1.1,age:0,col:'255,199,64',maxR:Math.max(W,H)});
+  capPush(G.rings,{x:W/2,y:H*0.45,r:10,life:1.1,age:0,col:'255,199,64',maxR:Math.max(W,H)});
   const close=()=>{ ov.classList.remove('show'); luLock=false; ov.onclick=null; };
   ov.onclick=close; setTimeout(close,3400);
 }
@@ -1626,7 +1855,7 @@ function openLuckyBox(){
     A.lbxOpen(prize.rarity); haptic(prize.rarity==='legendary'?HAP.big:HAP.cash);
     G.balance+=prize.amt; SAVE.balance=G.balance; SAVE.luckyBoxesOpened=(SAVE.luckyBoxesOpened||0)+1; save(); updateBalance();
     burst(W/2,H/2,30,LBX_COLOR[prize.rarity],260);
-    if(prize.rarity==='legendary'){ for(let i=0;i<60;i++) G.confetti.push({x:W/2,y:H/2,vx:(Math.random()-.5)*400,vy:-Math.random()*400-50,life:2,age:0,w:4+Math.random()*4,h:6+Math.random()*6,rot:Math.random()*6,vr:(Math.random()-.5)*12,hue:Math.floor(Math.random()*60+30)}); }
+    if(prize.rarity==='legendary'){ for(let i=0;i<60;i++) capPush(G.confetti,{x:W/2,y:H/2,vx:(Math.random()-.5)*400,vy:-Math.random()*400-50,life:2,age:0,w:4+Math.random()*4,h:6+Math.random()*6,rot:Math.random()*6,vr:(Math.random()-.5)*12,hue:Math.floor(Math.random()*60+30)}); }
   },700);
   // ponytail: close() carries XP/achievement side effects — was firing twice
   // (once via tap, once via the 6s safety timer). Guard makes it idempotent.
@@ -1642,13 +1871,17 @@ function bumpCombo(){ SAVE.comboCount=(SAVE.comboCount||0)+1; if(SAVE.comboCount
 function resetCombo(){ if((SAVE.comboCount||0)>0){ SAVE.comboCount=0; save(); } }
 let comboT=null;
 function showComboFx(n){
+  const fly=G.phase===PH.FLY;
   const el=document.getElementById('comboFx');
-  el.style.fontSize=Math.min(36+n*3,54)+'px';
+  /* v7 — compact + smaller during flight */
+  const max=fly?38:54;
+  el.style.fontSize=Math.min(36+n*3,max)+'px';
+  el.classList.toggle('compact',fly);
   el.textContent=n+'x COMBO!';
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-  clearTimeout(comboT); comboT=setTimeout(()=>el.classList.remove('show'),700);
-  // Screen shake + burst for higher combos
-  if(n>=3&&!SAVE.settings.reducedMotion){
+  clearTimeout(comboT); comboT=setTimeout(()=>el.classList.remove('show'), fly?500:700);
+  // Screen shake + burst for higher combos (suppressed mid-flight to keep canvas steady)
+  if(n>=3&&!SAVE.settings.reducedMotion&&!fly){
     G.shake=Math.max(G.shake||0, Math.min(8, n*1.5));
     if(n>=5){ burst(W/2,H*0.4,12,'#ffc740',200); burst(W/2,H*0.4,8,'#b07bff',150); }
   }
@@ -1741,7 +1974,7 @@ function loop(ts){
 		    const MILES=[{t:1,v:2,tx:'2× — LIFTOFF'},{t:2,v:5,tx:'5× — HEATING UP'},{t:3,v:10,tx:'10× 🚀 TO THE MOON'},{t:4,v:25,tx:'25× 🌙 LEGENDARY'},{t:5,v:50,tx:'50× 👑 GODLIKE'},{t:6,v:100,tx:'100× 🌠 MYTHIC'}];
 	    for(const ml of MILES){ if(!G.hitMile[ml.t] && G.mult>=ml.v){ G.hitMile[ml.t]=1; milestoneFlash(ml.t,ml.tx); } }
 	    const last=plot(G.elapsed,G.mult);
-	    if(!SAVE.settings.reducedMotion && Math.random()<0.7){ const sk=skinById(SAVE.equippedSkin); G.embers.push({x:last.x,y:last.y,vx:-20-Math.random()*30,vy:30+Math.random()*40,life:0.5+Math.random()*.3,age:0,r:1.5+Math.random()*2,col:sk.trail}); }
+	    if(!SAVE.settings.reducedMotion && Math.random()<0.7){ const sk=skinById(SAVE.equippedSkin); capPush(G.embers,{x:last.x,y:last.y,vx:-20-Math.random()*30,vy:30+Math.random()*40,life:0.5+Math.random()*.3,age:0,r:1.5+Math.random()*2,col:sk.trail}); }
 		    for(const b of G.bets){ if(b.placed && !b.cashedOut && G.mult>=b.autoAt) doCashOut(b); }
 			    // ponytail: double-check crashAt validity every frame during flight — if it somehow
 			    // got corrupted (e.g. crashFromHash threw and was caught), floor at 1.01 so the round
@@ -1772,19 +2005,42 @@ function loop(ts){
 	}
 	function updateFX(dt){
   const ds=dt/1000;
-  for(let i=0;i<G.particles.length;i++){const p=G.particles[i];p.age+=ds;p.vy+=320*ds;p.x+=p.vx*ds;p.y+=p.vy*ds;p.vx*=.98;} for(let i=G.particles.length-1;i>=0;i--) if(G.particles[i].age>=G.particles[i].life) G.particles.splice(i,1);
-  for(let i=0;i<G.embers.length;i++){const e=G.embers[i];e.age+=ds;e.vy+=20*ds;e.x+=e.vx*ds;e.y+=e.vy*ds;} for(let i=G.embers.length-1;i>=0;i--) if(G.embers[i].age>=G.embers[i].life) G.embers.splice(i,1);
-  for(let i=0;i<G.smoke.length;i++){const s=G.smoke[i];s.age+=ds;s.x+=s.vx*ds;s.y+=s.vy*ds;s.r+=8*ds;s.a=s.a*(1-ds*0.8);} for(let i=G.smoke.length-1;i>=0;i--) if(G.smoke[i].a<=0.02) G.smoke.splice(i,1);
-  for(let i=0;i<G.coins.length;i++){const c=G.coins[i];c.age+=ds;c.vy+=560*ds;c.x+=c.vx*ds;c.y+=c.vy*ds;c.vx*=.99;c.rot+=c.vr*ds;} for(let i=G.coins.length-1;i>=0;i--) if(G.coins[i].age>=G.coins[i].life||G.coins[i].y>H+30) G.coins.splice(i,1);
-  for(let i=0;i<G.confetti.length;i++){const c=G.confetti[i];c.age+=ds;c.vy+=180*ds;c.x+=c.vx*ds;c.y+=c.vy*ds;c.rot+=c.vr*ds;} for(let i=G.confetti.length-1;i>=0;i--) if(G.confetti[i].age>=G.confetti[i].life||G.confetti[i].y>H+30) G.confetti.splice(i,1);
-  for(let i=0;i<G.rings.length;i++){const r=G.rings[i];r.age+=ds;r.r+=(r.maxR/r.life)*ds;} for(let i=G.rings.length-1;i>=0;i--) if(G.rings[i].age>=G.rings[i].life) G.rings.splice(i,1);
-  for(let i=0;i<G.debris.length;i++){const d=G.debris[i];d.age+=ds;d.vy+=300*ds;d.x+=d.vx*ds;d.y+=d.vy*ds;d.rot+=d.vr*ds;} for(let i=G.debris.length-1;i>=0;i--) if(G.debris[i].age>=G.debris[i].life) G.debris.splice(i,1);
-	  if(G.shake>0){G.shake*=.88;if(G.shake<.3)G.shake=0;}
-	  if(G.flash>0){G.flash*=.9;if(G.flash<.01)G.flash=0;}
-	  if(G.flash2>0){G.flash2*=.88;if(G.flash2<.01)G.flash2=0;}
+  /* ponytail: perf — in-place compaction (swap-and-pop) replaces 7 splice() chains.
+     splice() shifts every element after the removed index, so a 200-particle burst
+     becomes ~O(n²) per frame. Compaction does ONE forward pass, copying survivors
+     into the head of the array — zero shifting, behavior-identical physics. */
+  let w=0;
+  for(let i=0;i<G.particles.length;i++){const p=G.particles[i];p.age+=ds;p.vy+=320*ds;p.x+=p.vx*ds;p.y+=p.vy*ds;p.vx*=.98; if(p.age<p.life) G.particles[w++]=p;}
+  G.particles.length=w;
+  w=0;
+  for(let i=0;i<G.embers.length;i++){const e=G.embers[i];e.age+=ds;e.vy+=20*ds;e.x+=e.vx*ds;e.y+=e.vy*ds; if(e.age<e.life) G.embers[w++]=e;}
+  G.embers.length=w;
+  w=0;
+  for(let i=0;i<G.smoke.length;i++){const s=G.smoke[i];s.age+=ds;s.x+=s.vx*ds;s.y+=s.vy*ds;s.r+=8*ds;s.a=s.a*(1-ds*0.8); if(s.a>0.02) G.smoke[w++]=s;}
+  G.smoke.length=w;
+  w=0;
+  for(let i=0;i<G.coins.length;i++){const c=G.coins[i];c.age+=ds;c.vy+=560*ds;c.x+=c.vx*ds;c.y+=c.vy*ds;c.vx*=.99;c.rot+=c.vr*ds; if(c.age<c.life&&c.y<=H+30) G.coins[w++]=c;}
+  G.coins.length=w;
+  w=0;
+  for(let i=0;i<G.confetti.length;i++){const c=G.confetti[i];c.age+=ds;c.vy+=180*ds;c.x+=c.vx*ds;c.y+=c.vy*ds;c.rot+=c.vr*ds; if(c.age<c.life&&c.y<=H+30) G.confetti[w++]=c;}
+  G.confetti.length=w;
+  w=0;
+  for(let i=0;i<G.rings.length;i++){const r=G.rings[i];r.age+=ds;r.r+=(r.maxR/r.life)*ds; if(r.age<r.life) G.rings[w++]=r;}
+  G.rings.length=w;
+  w=0;
+  for(let i=0;i<G.debris.length;i++){const d=G.debris[i];d.age+=ds;d.vy+=300*ds;d.x+=d.vx*ds;d.y+=d.vy*ds;d.rot+=d.vr*ds; if(d.age<d.life) G.debris[w++]=d;}
+  G.debris.length=w;
+  if(G.shake>0){G.shake*=.88;if(G.shake<.3)G.shake=0;}
+  if(G.flash>0){G.flash*=.9;if(G.flash<.01)G.flash=0;}
+  if(G.flash2>0){G.flash2*=.88;if(G.flash2<.01)G.flash2=0;}
   if(G.phase===PH.FLY && Math.floor(G.elapsed/2500)!==(G._lastSwell||0)){ G._lastSwell=Math.floor(G.elapsed/2500); A.swell(G._lastSwell); }
 }
-function burst(x,y,n,col,sp){ for(let i=0;i<n;i++){const a=Math.random()*6.28,v=(sp||200)*(.4+Math.random()*.8); G.particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.6+Math.random()*.5,age:0,r:2+Math.random()*4,col}); } }
+/* ponytail: perf — hard caps prevent unbounded array growth during big explosions
+   and rapid re-triggering. Values are well above the visual perception threshold:
+   200 vs 400 coins is indistinguishable on a 5.5" screen, but it halves GC pressure. */
+const POOL_CAP={particles:260,coins:160,confetti:220,embers:160,smoke:60,debris:80,rings:24};
+function capPush(arr,item){ if(arr.length<POOL_CAP[arr===G.particles?'particles':arr===G.coins?'coins':arr===G.confetti?'confetti':arr===G.embers?'embers':arr===G.smoke?'smoke':arr===G.debris?'debris':'rings']) arr.push(item); }
+function burst(x,y,n,col,sp){ if(G.particles.length>=POOL_CAP.particles) return; const room=POOL_CAP.particles-G.particles.length; n=Math.min(n,room); for(let i=0;i<n;i++){const a=Math.random()*6.28,v=(sp||200)*(.4+Math.random()*.8); G.particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.6+Math.random()*.5,age:0,r:2+Math.random()*4,col}); } }
 
 /* ---------- Render ---------- */
 function render(){
@@ -1932,23 +2188,31 @@ function drawRockets(){
     ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
     drawRocketShape(sk, 1.5);   // bigger hero — reads as a rocket at phone scale, not a blob
     ctx.restore();
-    if(Math.random()<0.25) G.smoke.push({x:x-6,y:y,vx:-15+Math.random()*-10,vy:(Math.random()-.5)*10,r:3+Math.random()*3,a:0.5});
+    if(Math.random()<0.25) capPush(G.smoke,{x:x-6,y:y,vx:-15+Math.random()*-10,vy:(Math.random()-.5)*10,r:3+Math.random()*3,a:0.5});
   }
 }
 function drawRings(){ for(const r of G.rings){const k=1-r.age/r.life;if(k<=0)continue; ctx.save(); ctx.strokeStyle='rgba('+r.col+','+(k*0.7).toFixed(3)+')'; ctx.lineWidth=3*k+1; ctx.beginPath(); ctx.arc(r.x,r.y,r.r,0,6.28); ctx.stroke(); ctx.restore();} }
 function drawParticles(){ for(const p of G.particles){const k=1-p.age/p.life;ctx.globalAlpha=Math.max(0,k);ctx.fillStyle=p.col||'#ff8b3d';ctx.beginPath();ctx.arc(p.x,p.y,p.r*k+.5,0,6.28);ctx.fill();} ctx.globalAlpha=1; }
 function drawDebris(){ for(const d of G.debris){const k=1-d.age/d.life;if(k<=0)continue; ctx.save(); ctx.globalAlpha=Math.max(0,k); ctx.translate(d.x,d.y); ctx.rotate(d.rot); ctx.fillStyle=d.col; ctx.fillRect(-d.r,-d.r/2,d.r*2,d.r); ctx.restore();} ctx.globalAlpha=1; }
-function drawCoins(){ for(const c of G.coins){const k=1-c.age/c.life;if(k<=0)continue; ctx.save(); ctx.globalAlpha=Math.max(0,k); ctx.translate(c.x,c.y); ctx.rotate(c.rot); const sxx=Math.abs(Math.cos(c.rot)); ctx.scale(sxx||0.1,1); ctx.font=(c.r*2.4)+'px '+BODY_FONT; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🪙',0,0); ctx.restore();} ctx.globalAlpha=1; ctx.textAlign='start'; ctx.textBaseline='alphabetic'; }
+function drawCoins(){ if(G.coins.length===0)return; ctx.font=(G.coins[0].r*2.4).toFixed(1)+'px '+BODY_FONT; ctx.textAlign='center'; ctx.textBaseline='middle'; for(const c of G.coins){const k=1-c.age/c.life;if(k<=0)continue; ctx.save(); ctx.globalAlpha=Math.max(0,k); ctx.translate(c.x,c.y); ctx.rotate(c.rot); const sxx=Math.abs(Math.cos(c.rot)); ctx.scale(sxx||0.1,1); ctx.fillText('🪙',0,0); ctx.restore();} ctx.globalAlpha=1; ctx.textAlign='start'; ctx.textBaseline='alphabetic'; }
 function drawConfetti(){ for(const c of G.confetti){const k=1-c.age/c.life;if(k<=0)continue; ctx.save(); ctx.globalAlpha=Math.max(0,k); ctx.translate(c.x,c.y); ctx.rotate(c.rot); ctx.fillStyle='hsl('+c.hue+',90%,60%)'; ctx.fillRect(-c.w/2,-c.h/2,c.w,c.h); ctx.restore();} ctx.globalAlpha=1; }
 
 /* ---------- UI ---------- */
 const multEl=document.getElementById('mult'),multSubEl=document.getElementById('multSub'),phaseEl=document.getElementById('phaseLbl'),bannerEl=document.getElementById('banner');
+let _multPulseT=null;
 function updateMultDisplay(){
   // ponytail: Aviator/JetX — the hero multiplier ALWAYS shows the live climb during
   // flight, even after every bet has cashed out. Your win is surfaced in the bet card,
   // banner, floating text + share card; cashing must NOT freeze the climbing number.
   const cls=G.mult>5?'danger':G.mult>2.5?'warn':'fly'; multEl.className=cls; multEl.innerHTML=fmt(G.mult)+'<span style="font-size:.45em">×</span>';
-  if(G.mult-G.lastTickMult>=0.1){ multEl.style.transform='scale(1.04)'; setTimeout(()=>{multEl.style.transform='scale(1)';},80); G.lastTickMult=G.mult; }
+  /* v7 — debounce the pulse with a single reusable timer instead of stacking one
+     setTimeout per 0.1× tick (was leaking dozens of timers during long flights). */
+  if(G.mult-G.lastTickMult>=0.1){
+    multEl.style.transform='scale(1.04)';
+    clearTimeout(_multPulseT);
+    _multPulseT=setTimeout(()=>{multEl.style.transform='scale(1)';},80);
+    G.lastTickMult=G.mult;
+  }
   if(G.mult<1.5)multSubEl.textContent=''; else if(G.mult<2.5)multSubEl.textContent='RISING'; else if(G.mult<5)multSubEl.textContent='🔥 HEATING UP'; else if(G.mult<10)multSubEl.textContent='🚀 TO THE MOON'; else multSubEl.textContent='🌙 LEGENDARY';
 }
 function setPhase(t,sub,go,danger){ phaseEl.textContent=t; phaseEl.classList.toggle('go',!!go); phaseEl.classList.toggle('danger',!!danger); }
@@ -1969,18 +2233,27 @@ function updateBalance(noAnim){ const el=document.getElementById('balance'); con
 	}
 let mileElT=null;
 function milestoneFlash(tier,txt){
-  const el=document.getElementById('mileFlash'); el.textContent=txt; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(mileElT); mileElT=setTimeout(()=>el.classList.remove('show'),800+Math.min(tier,6)*50);
+  const fly=G.phase===PH.FLY;
+  const el=document.getElementById('mileFlash');
+  el.textContent=txt;
+  /* v7 — compact during flight: top 12%, smaller, shorter. Don't cover the hero multiplier. */
+  el.classList.toggle('compact', fly);
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  clearTimeout(mileElT);
+  mileElT=setTimeout(()=>el.classList.remove('show'), fly ? 500 : 800+Math.min(tier,6)*50);
   A.milestone(tier);
   const last=plot(G.elapsed,G.mult);
   const intensity=(tier-1)/5; // 0..1 scale
-  const n=Math.round(12+intensity*20);
-  const sp=Math.round(200+intensity*180);
+  const scale = fly ? 0.5 : 1; // smaller bursts mid-flight
+  const n=Math.round((12+intensity*20)*scale);
+  const sp=Math.round((200+intensity*180)*scale);
   burst(last.x,last.y,n,'#ffc740',sp);
   if(intensity>0.3) burst(last.x,last.y,Math.round(n*0.6),'#b07bff',sp*0.8);
   if(intensity>0.6) burst(last.x,last.y,Math.round(n*0.4),'#ff3b5c',sp*0.6);
-  G.rings.push({x:last.x,y:last.y,r:10,life:0.5+intensity*0.4,age:0,col:'255,199,64',maxR:Math.max(W,H)*(0.3+intensity*0.3)});
-  if(intensity>0.4) G.rings.push({x:last.x,y:last.y,r:10,life:0.8+intensity*0.4,age:0,col:'176,123,255',maxR:Math.max(W,H)*(0.5+intensity*0.3)});
-  if(intensity>0.7) G.rings.push({x:W/2,y:H*0.45,r:10,life:1.0,age:0,col:'255,199,64',maxR:Math.max(W,H)*0.8});
+  if(!fly || intensity>0.6){
+    capPush(G.rings,{x:last.x,y:last.y,r:10,life:0.5+intensity*0.4,age:0,col:'255,199,64',maxR:Math.max(W,H)*(0.3+intensity*0.3)});
+  }
+  if(intensity>0.7 && !fly) capPush(G.rings,{x:W/2,y:H*0.45,r:10,life:1.0,age:0,col:'255,199,64',maxR:Math.max(W,H)*0.8});
   haptic([20,30,20].map(v=>Math.round(v*(1+intensity*0.5))));
   // Speed up star drift for dramatic effect at high tiers
   if(intensity>0.5 && G.bgStars.length){
@@ -1989,17 +2262,23 @@ function milestoneFlash(tier,txt){
 }
 let dblT=null;
 function doubleFlashShow(){
+  const fly=G.phase===PH.FLY;
   const el=document.getElementById('doubleFlash');
   el.textContent='💰 DOUBLE CASH! 💰';
+  el.classList.toggle('compact',fly);
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-  clearTimeout(dblT); dblT=setTimeout(()=>el.classList.remove('show'),900);
+  clearTimeout(dblT); dblT=setTimeout(()=>el.classList.remove('show'), fly?500:900);
   A.doubleCash(); haptic([30,40,30,40,30]);
   if(!SAVE.settings.reducedMotion){
-    G.flash=0.25; G.flashColor='255,199,64';
-    burst(W/2,H*0.4,24,'#ffc740',280);
-    burst(W/2,H*0.4,16,'#2ee68a',220);
-    G.rings.push({x:W/2,y:H*0.4,r:10,life:0.6,age:0,col:'255,199,64',maxR:Math.max(W,H)*0.6});
-    G.shake=Math.max(G.shake||0,5);
+    /* v7 — mid-flight: no screen flash/shake, smaller burst (keep canvas readable) */
+    if(fly){ burst(W/2,H*0.16,10,'#ffc740',160); }
+    else {
+      G.flash=0.25; G.flashColor='255,199,64';
+      burst(W/2,H*0.4,24,'#ffc740',280);
+      burst(W/2,H*0.4,16,'#2ee68a',220);
+      capPush(G.rings,{x:W/2,y:H*0.4,r:10,life:0.6,age:0,col:'255,199,64',maxR:Math.max(W,H)*0.6});
+      G.shake=Math.max(G.shake||0,5);
+    }
   }
 }
 function updateStats(){
@@ -2282,7 +2561,15 @@ document.getElementById('playBtn').onclick=async ()=>{
   if(SAVE.rp.excludedUntil && Date.now()<SAVE.rp.excludedUntil){ setTimeout(()=>toast('🚫 Self-exclusion active — betting is locked. See Responsible Play.'),800); }
   if(!SAVE.tutorialDone){ SAVE.tutorialDone=true; save(); setTimeout(openHelp,400); }
 };
-window.addEventListener('keydown',e=>{ if(e.code==='Space'){ e.preventDefault(); if(!G.started){document.getElementById('playBtn').click();return;} const b=G.bets.find(x=>x.placed&&!x.cashedOut); if(b)onBetBtn(b); } });
+window.addEventListener('keydown',e=>{ if(e.code==='Space'){
+  // Don't hijack spacebar when the user is typing in a bet/auto input or any
+  // form field — otherwise editing an amount mid-round triggers a stray cashout.
+  const tag=document.activeElement && document.activeElement.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
+  e.preventDefault();
+  if(!G.started){document.getElementById('playBtn').click();return;}
+  const b=G.bets.find(x=>x.placed&&!x.cashedOut); if(b)onBetBtn(b);
+} });
 window.addEventListener('pointerdown',()=>{
 	  A.resume();
 	  A.setMute(SAVE.mute); A.setVol(SAVE.settings.volume);
@@ -2517,10 +2804,17 @@ function botRoundEnd(crashAt){
 	}
 
 /* ---------- Share card for big wins ---------- */
+let shareCardT=null;
 function showShareCard(mult,win){
   document.getElementById('shareMult').textContent=mult.toFixed(2)+'×';
   document.getElementById('shareAmt').textContent='+'+win.toLocaleString()+' 🪙';
-  document.getElementById('shareCard').classList.add('show');
+  const card=document.getElementById('shareCard');
+  /* v7 — if a round is still live, show compact at bottom so it never covers the multiplier. */
+  card.classList.toggle('compact', G.phase===PH.FLY);
+  card.classList.add('show');
+  /* v7 — auto-dismiss so the card never lingers over the next round. */
+  clearTimeout(shareCardT);
+  shareCardT=setTimeout(()=>card.classList.remove('show'),3000);
 }
 document.getElementById('shareClose').onclick=()=>document.getElementById('shareCard').classList.remove('show');
 /* ponytail: generates a real PNG of the win for native share sheet (vs plain text).
@@ -2559,6 +2853,8 @@ document.getElementById('shareCopy').onclick=async ()=>{
   const mult=parseFloat(document.getElementById('shareMult').textContent)||1;
   const amt=parseInt((document.getElementById('shareAmt').textContent||'0').replace(/[^0-9]/g,''));
   const txt='🚀 BOOST! Just cashed '+mult.toFixed(2)+'× → +'+amt.toLocaleString()+' 🪙';
+  /* v7: inside Telegram, share natively to chats (viral loop). */
+  if(TG.ready && TG.shareWin(mult, amt)){ return; }
   try{
     if(navigator.share){
       const blob=await generateShareImage(mult,amt);
@@ -2612,7 +2908,7 @@ function openChest(){
   });
 }
 document.getElementById('chestClose').onclick=()=>{ document.getElementById('chestModal').classList.remove('show'); chestBusy=false; };
-function spawnCoinsBurst(){ if(SAVE.settings.reducedMotion)return; for(let i=0;i<24;i++) G.coins.push({x:W*0.5,y:H*0.5,vx:(Math.random()-.5)*400,vy:-Math.random()*500-100,life:1.4,age:0,r:5+Math.random()*5,rot:Math.random()*6,vr:(Math.random()-.5)*10}); }
+function spawnCoinsBurst(){ if(SAVE.settings.reducedMotion)return; for(let i=0;i<24;i++) capPush(G.coins,{x:W*0.5,y:H*0.5,vx:(Math.random()-.5)*400,vy:-Math.random()*500-100,life:1.4,age:0,r:5+Math.random()*5,rot:Math.random()*6,vr:(Math.random()-.5)*10}); }
 
 /* ---------- Repeat / Auto-bet buttons ---------- */
 const repeatBtn=document.getElementById('repeatBtn'), auto1Btn=document.getElementById('auto1Btn');
@@ -2733,6 +3029,29 @@ function openResponsible(){
 
 /* ---------- Init ---------- */
 function init(){
+  /* v7: initialize Telegram Mini App first — it may resize the viewport and
+     sync theme colors, which must happen before we measure the canvas. */
+  TG.init();
+  /* Telegram back button closes any open sheet/modal instead of exiting the app. */
+  if(TG.ready && window.Telegram.WebApp.BackButton){
+    const bb=window.Telegram.WebApp.BackButton;
+    const closeTop=()=>{
+      const m=document.getElementById('modal');
+      const cm=document.getElementById('chestModal');
+      const lb=document.getElementById('lbxModal');
+      const sc=document.getElementById('shareCard');
+      if(lb && lb.classList.contains('show')){ lb.classList.remove('show'); return; }
+      if(cm && cm.classList.contains('show')){ cm.classList.remove('show'); chestBusy=false; return; }
+      if(sc && sc.classList.contains('show')){ sc.classList.remove('show'); return; }
+      if(m && m.classList.contains('show')){ closeModal(); return; }
+    };
+    // BackButton API uses onClick/offClick (not onEvent)
+    if(typeof bb.onClick==='function') bb.onClick(closeTop);
+    // Show/hide back button with modal state
+    const _obsModal=()=>{ TG.setBackButton(document.getElementById('modal').classList.contains('show') || document.getElementById('chestModal').classList.contains('show') || document.getElementById('lbxModal').classList.contains('show') || document.getElementById('shareCard').classList.contains('show')); };
+    const mo=new MutationObserver(_obsModal);
+    ['modal','chestModal','lbxModal','shareCard'].forEach(id=>{ const el=document.getElementById(id); if(el) mo.observe(el,{attributes:true,attributeFilter:['class']}); });
+  }
   resize(); genBg(); checkMissionReset();
   document.getElementById('balance').textContent=Math.round(SAVE.balance).toLocaleString();
   headerMuteBtn.textContent=SAVE.mute?'🔇':'🔊';
@@ -2743,10 +3062,9 @@ function init(){
   if(SAVE.history.length===0){ for(let i=0;i<10;i++){ SAVE.history.push({m:crashFromHash(randHex(8)),result:'-',winAmt:0,fresh:false}); } renderHistory(); save(); }
   watchState(); // State integrity watchdog
   requestAnimationFrame(loop);
-  // v6: probe the fairness server in the background. The result primes
-  // _apiAvailable so the Provably Fair panel can label itself honestly
-  // before the first round even starts. Non-blocking — the game plays
-  // immediately regardless.
+  // Personalize the bot-name bot feed if we know the Telegram user's name.
+  const tgu = TG.user();
+  if(tgu && tgu.name){ try{ document.querySelectorAll('.lfrow .nm').forEach(()=>{}); }catch(e){} }
   apiProbe().catch(()=>{ _apiAvailable=false; });
 }
 init();
