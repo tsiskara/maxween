@@ -370,6 +370,29 @@ begin
   update withdrawals set status='failed', processed_at=now() where id = p_withdrawal_id;
 end; $$;
 
+-- Mark a withdrawal as sent after a successful NowPayments payout.
+-- SECURITY DEFINER because withdrawals has NO update policy (writes are RPC-only
+-- by design). Idempotent: only flips pending→sent; a row already sent/failed is
+-- left untouched. Without this the payout success path updated the row directly
+-- via the caller-scoped client, which RLS silently no-ops → the row stays
+-- 'pending' forever and refund_withdrawal's status='sent' guard never trips,
+-- allowing a double-refund on a payout that was already sent.
+create or replace function public.mark_withdrawal_sent(
+  p_withdrawal_id bigint, p_payout_id text
+) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare wd withdrawals%rowtype; uid uuid := auth.uid();
+begin
+  select * into wd from withdrawals where id = p_withdrawal_id for update;
+  if not found then return false; end if;
+  if uid is null or wd.user_id <> uid then return false; end if;  -- own row only
+  if wd.status not in ('pending') then return true; end if;       -- idempotent
+  update withdrawals
+    set status = 'sent', payout_id = p_payout_id, processed_at = now()
+    where id = p_withdrawal_id;
+  return true;
+end; $$;
+
 -- ============ RLS ============
 alter table public.profiles     enable row level security;
 alter table public.wallets      enable row level security;

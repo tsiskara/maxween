@@ -57,11 +57,11 @@ export default async function handler(req, res) {
   // 2. Drive the payout. On any failure, refund and report.
   try {
     const payout = await createPayout({ address, amount, currency, withdrawalId });
-    await sb.from('withdrawals').update({
-      status: 'sent',
-      payout_id: payout.id && String(payout.id),
-      processed_at: new Date().toISOString(),
-    }).eq('id', withdrawalId);
+    // Mark sent via SECURITY DEFINER RPC. The old direct .update() here was
+    // silently no-op'd by RLS (withdrawals has no update policy by design),
+    // leaving the row 'pending' and opening a double-refund once the payout
+    // had already left. Idempotent: a re-send after 'sent' is a no-op.
+    await sb.rpc('mark_withdrawal_sent', { p_withdrawal_id: withdrawalId, p_payout_id: payout.id && String(payout.id) });
     return res.status(200).json({ ok: true, withdrawalId, balance: balanceAfter, payoutId: payout.id });
   } catch (e) {
     console.error('payout failed; refunding', e.status, e.body);
